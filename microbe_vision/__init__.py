@@ -1,5 +1,5 @@
 """
-This is the initialization module for the 2D Bio Tracker package.
+This is the initialization module for the Microbe vision package.
 
 The package provides functionality for capturing and tracking 2D biological data.
 
