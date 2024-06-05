@@ -16,7 +16,7 @@ setup(
         'matplotlib-inline==0.1.6',
         'numpy==1.24.4',
         'natsort==8.4.0',
-        'omnipose==1.0.6',
+        'omnipose>=1.0.6',
         'opencv-python==4.9.0.80',
         'opencv-python-headless==4.9.0.80',
         'pandas==2.1.4',
