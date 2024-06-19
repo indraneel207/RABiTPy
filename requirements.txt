@@ -4,7 +4,7 @@ matplotlib==3.7.5
 matplotlib-inline==0.1.6
 numpy==1.24.4
 natsort==8.4.0
-omnipose @ git+https://github.com/kevinjohncutler/omnipose.git
+omnipose @ git+https://github.com/kevinjohncutler/omnipose.git@63045b1af0d52174dee7ff18e94c7cfd84ddd2ff
 opencv-python==4.9.0.80
 opencv-python-headless==4.9.0.80
 pandas==2.1.4
