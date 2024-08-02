@@ -69,7 +69,7 @@ class Capture:
             print(e)
 
     def process_video_into_frames(self, pixel_to_um: float,
-                                       capture_speed_in_fps = DEFAULT_CAPTURE_SPEED_IN_FPS,
+                                       capture_speed_in_fps = None,
                                        is_store_video_frames = False,
                                        store_images_path = DEFAULT_STORE_IMAGE_FILE_DIRECTORY) -> list:
         """
@@ -90,7 +90,10 @@ class Capture:
         """
         try:
             if not pixel_to_um:
-                raise ValueError('Pixel to um is mandatory to process the video and calculate the stats')
+                raise ValueError('Error: A valid Pixel to Micron ratio is mandatory to process the video and calculate the stats')
+
+            if capture_speed_in_fps is None:
+                capture_speed_in_fps = Capture.DEFAULT_CAPTURE_SPEED_IN_FPS
 
             captured_frames = []
             self._video_capture_speed = capture_speed_in_fps
