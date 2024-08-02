@@ -55,9 +55,12 @@ class Capture:
             file_path = self.__generate_and_validate_file_path(file_name)
             self._video_file_path = file_path
 
-            with cv2.VideoCapture(self._video_file_path) as video:
+            video = cv2.VideoCapture(self._video_file_path)
+            try:
                 default_video_fps = self.__print_video_info_and_get_fps(video)
                 Capture.DEFAULT_CAPTURE_SPEED_IN_FPS = default_video_fps
+            finally:
+                video.release()
 
             print(f'Video file loaded successfully: {file_path}')
             return file_path
@@ -184,8 +187,11 @@ class Capture:
             self._video_frames_store_path = complete_store_path
 
         captured_frames = []
-        with cv2.VideoCapture(self._video_file_path) as video:
-                captured_frames = self.__capture_and_store_frames(video, is_store_video_frames)
+        video = cv2.VideoCapture(self._video_file_path)
+        try:
+            captured_frames = self.__capture_and_store_frames(video, is_store_video_frames)
+        finally:
+            video.release()
 
         print(f'{len(captured_frames)} frame(s) captured successfully '
               f'for the given FPS: {self._video_capture_speed} to the '
