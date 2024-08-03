@@ -35,17 +35,50 @@ class Capture:
         self._video_frames_store_path: str = ''
         self._captured_frames: list = []
 
-    def load_video_and_retrieve_frames(self, file_name='',
-                                       capture_speed_in_fps=DEFAULT_CAPTURE_SPEED_IN_FPS,
-                                       pixel_to_um = DEFAULT_PIXEL_TO_MICRON,
-                                       is_store_video_frames=False,
-                                       store_images_path=DEFAULT_STORE_IMAGE_FILE_DIRECTORY):
+    def load_video(self, file_name=''):
         """
-        Retrieves and validates the file path based on user input.
+        Retrieves and validates the file path based on user input and prints the video information.
 
         Args:
           file_name (str, optional): The name of the video file. Defaults to ''.
-          capture_speed_in_fps (int, optional): Capture speed in frames/sec. Defaults to DEFAULT_CAPTURE_SPEED_IN_FPS.
+
+        Returns:
+          str: The validated file path.
+
+        Raises:
+          FileNotFoundError: If the specified file is not found.
+        """
+        try:
+            self._video_file_name = file_name
+
+            self.__validate_the_file_name_and_type(file_name)
+            file_path = self.__generate_and_validate_file_path(file_name)
+            self._video_file_path = file_path
+
+            video = cv2.VideoCapture(self._video_file_path)
+            try:
+                default_video_fps = self.__print_video_info_and_get_fps(video)
+                Capture.DEFAULT_CAPTURE_SPEED_IN_FPS = default_video_fps
+            finally:
+                video.release()
+
+            print(f'Video file loaded successfully: {file_path}')
+            return file_path
+
+        except FileNotFoundError as e:
+            print(e)
+
+    def process_video_into_frames(self, pixel_to_um: float,
+                                       capture_speed_in_fps = None,
+                                       is_store_video_frames = False,
+                                       store_images_path = DEFAULT_STORE_IMAGE_FILE_DIRECTORY) -> list:
+        """
+        Processes the already loaded video into frames based on the given pixel to micrometer conversion factor and capture speed.
+        The pixel_to_um is mandatory to process the video into frames else will give an error.
+
+        Args:
+          pixel_to_um (float): The pixel to micrometer conversion factor.
+          capture_speed_in_fps (int, optional): Capture speed in frames/sec. Defaults to given video FPS or 15.
           is_store_video_frames (bool, optional): Flag to store video frames. Defaults to False.
           store_images_path (str, optional): Path to store images. Defaults to DEFAULT_STORE_IMAGE_FILE_DIRECTORY.
 
@@ -53,25 +86,27 @@ class Capture:
           list: The captured frames.
 
         Raises:
-          FileNotFoundError: If the specified file is not found.
+          ValueError: If the pixel to micrometer conversion factor is not provided.
         """
         try:
+            if not pixel_to_um:
+                raise ValueError('Error: A valid Pixel to Micron ratio is mandatory to process the video and calculate the stats')
+
+            if capture_speed_in_fps is None:
+                capture_speed_in_fps = Capture.DEFAULT_CAPTURE_SPEED_IN_FPS
+
             captured_frames = []
-            self._video_file_name = file_name
             self._video_capture_speed = capture_speed_in_fps
             self._pixel_to_um = pixel_to_um
-
-            self.__validate_the_file_name_and_type(file_name)
-            file_path = self.__generate_and_validate_file_path(file_name)
-            self._video_file_path = file_path
 
             captured_frames = self.__capture_images_from_video(is_store_video_frames,
                                                                store_images_path)
             self._captured_frames = captured_frames
-            print(f'Video file loaded successfully: {file_path}')
+            print(
+                f'Processed video into frames successfully with pixel to um: {self._pixel_to_um}'
+            )
             return captured_frames
-
-        except FileNotFoundError as e:
+        except ValueError as e:
             print(e)
 
     def get_captured_frames(self):
@@ -154,12 +189,17 @@ class Capture:
             complete_store_path = self.__handle_folder_preprocess(store_images_path)
             self._video_frames_store_path = complete_store_path
 
+        captured_frames = []
         video = cv2.VideoCapture(self._video_file_path)
-        self.__print_video_info(video)
-        captured_frames = self.__capture_and_store_frames(video, is_store_video_frames)
+        try:
+            captured_frames = self.__capture_and_store_frames(video, is_store_video_frames)
+        finally:
+            video.release()
 
-        video.release()
-        print(f'{len(captured_frames)} frame(s) captured successfully for the given FPS: {self._video_capture_speed} to the folder: {self._video_frames_store_path}')
+        print(f'{len(captured_frames)} frame(s) captured successfully '
+              f'for the given FPS: {self._video_capture_speed} to the '
+              f'folder: {self._video_frames_store_path}'
+            )
         return captured_frames
 
     def __validate_the_file_name_and_type(self, file_name = ''):
@@ -328,21 +368,23 @@ class Capture:
             file_path = os.path.join(folder_path, file)
             os.remove(file_path)
 
-    def __print_video_info(self, video):
+    def __print_video_info_and_get_fps(self, video):
         """
-        Prints the information about the video.
+        Prints the information about the video and retrieves the frames per second (FPS).
 
         Args:
           video: The video object.
         """
+        video_fps = video.get(cv2.CAP_PROP_FPS)
         print('---------- Video Stats ----------')
         print(f'Video Frame Width: {int(video.get(cv2.CAP_PROP_FRAME_WIDTH))}')
         print(
             f'Video Frame Height: {int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))}')
-        print(f'Frame Rate: {video.get(cv2.CAP_PROP_FPS)}')
-        print(f'Total Frames: {video.get(cv2.CAP_PROP_FRAME_COUNT)}')
+        print(f'Frame Rate: {video_fps} FPS')
+        print(f'Total Frames: {video.get(cv2.CAP_PROP_FRAME_COUNT)} frames')
         print(f'Video Duration (s): {video.get(cv2.CAP_PROP_FRAME_COUNT) / video.get(cv2.CAP_PROP_FPS)}')
         print('---------------------------------')
+        return video_fps
 
     def __get_custom_total_frames(self, video):
         """

@@ -150,6 +150,14 @@ class Tracker:
         plt.gca().set_title('Scatter plot of the trajectories')
         plt.show()
 
+    def get_directory(self):
+        """
+        Retrieves the working directory.
+        Returns:
+        str: The working directory.
+        """
+        return self._directory
+
     # Private methods
     def __shape_and_sort_dataframe(self, dataframe: pd.DataFrame, cols: list[str], sort_by: list[str]) -> pd.DataFrame:
         """

@@ -1,6 +1,7 @@
 """
 Module to analyze particle motion and calculate speed distributions.
 """
+import os
 from typing import List
 
 import matplotlib.pyplot as plt
@@ -15,6 +16,7 @@ class Stats:
     """
     Class to analyze particle motion and calculate speed distributions.
     """
+    DEFAULT_DISTRIBUTION = 'norm'
 
     def __init__(self, tracker_object: Tracker) -> None:
         """
@@ -27,16 +29,19 @@ class Stats:
         """
         self._parent = tracker_object
         self._sorted_dataframe = tracker_object._linked_particles_dataframes
+        self._directory: str = tracker_object.get_directory()
         self._capture_speed_in_fps = tracker_object._parent._parent.get_frame_rate()
         self._pixel_to_um: float = tracker_object._parent._parent.get_pixel_to_um()
         self._mean_array: List[float] = []
 
-    def calculate_and_plot_mean(self, plots_per_row: int = 4) -> np.ndarray:
+    def calculate_and_plot_mean(self, plots_per_row: int = 4, distribution_type: any = DEFAULT_DISTRIBUTION) -> np.ndarray:
         """
         Calculate the mean array of speeds for each particle and plot the distributions.
 
         Args:
             plots_per_row (int): Number of plots per row in the grid.
+            distribution_type (any): Distribution to fit. Default is 'norm'. 
+                Check distfit documentation for more options here: https://erdogant.github.io/distfit/pages/html/Parametric.html#distributions
 
         Returns:
             np.ndarray: Array of mean speeds for each particle.
@@ -56,7 +61,7 @@ class Stats:
             current_particle = self.__get_particle_data(each_particle)
             speed = self.__calculate_speed(current_particle)
             mean_speed = self.__fit_and_plot_speed_distribution(
-                axes, idx, speed, each_particle)
+                axes, idx, speed, each_particle, distribution_type=distribution_type)
             mean_array.append(mean_speed)
 
         # Hide any unused subplots
@@ -102,7 +107,7 @@ class Stats:
         particle_data['speed'] = np.append(speed, 0)
         return speed
 
-    def __fit_and_plot_speed_distribution(self, axes: np.ndarray, idx: int, speed: np.ndarray, particle: int) -> float:
+    def __fit_and_plot_speed_distribution(self, axes: np.ndarray, idx: int, speed: np.ndarray, particle: int, distribution_type: any = DEFAULT_DISTRIBUTION) -> float:
         """
         Fit the speed distribution and plot the histogram and distribution.
 
@@ -110,11 +115,12 @@ class Stats:
             ax (plt.Axes): Matplotlib axes object to plot on.
             speed (np.ndarray): Array of speeds.
             particle (int): Particle ID.
+            distr (any): Distribution to fit.
 
         Returns:
             float: Mean speed of the particle.
         """
-        speed_distribution = distfit(distr='norm')
+        speed_distribution = distfit(distr=distribution_type)
         speed_distribution.fit_transform(speed)
         mean_speed = speed_distribution.model['loc']
 
@@ -148,7 +154,7 @@ class Stats:
         for j in range(start_idx, len(axes)):
             fig.delaxes(axes[j])
 
-    def plot_overall_mean_speed_distribution(self) -> None:
+    def plot_overall_mean_speed_distribution(self, distribution_type: any = DEFAULT_DISTRIBUTION) -> None:
         """
         Plot the overall mean speed distribution.
 
@@ -161,7 +167,7 @@ class Stats:
         # Normalize the overall distribution of mean_array
         fig, ax = plt.subplots(figsize=(10, 6))
         mean_array = np.array(self._mean_array)
-        mean_distribution = distfit(distr='norm')
+        mean_distribution = distfit(distr=distribution_type)
         mean_distribution.fit_transform(mean_array)
         
         mean_distribution.plot(ax=ax)
@@ -170,3 +176,20 @@ class Stats:
         ax.set_title('Overall Mean Speed Distribution')
         ax.legend()
         plt.show()
+
+    def save_mean_speeds(self, filename: str) -> None:
+        """
+        Save the mean speeds to a CSV file.
+
+        Args:
+            filename (str): The filename to save the CSV file.
+
+        Returns:
+            None
+        """
+        mean_array = np.array(self._mean_array)
+        mean_df = pd.DataFrame(mean_array, columns=['mean_speed'])
+        save_file_path = os.path.join(
+            self._directory, f'{filename}.csv')
+        mean_df.to_csv(save_file_path, index=False)
+        print(f'Mean speeds saved to {save_file_path}')

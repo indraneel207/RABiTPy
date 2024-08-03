@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='microbe_vision',
-    version='0.1.0-alpha',
+    version='0.1.1-alpha',
     packages=find_packages(),
     install_requires=[
         # Add your package dependencies here
