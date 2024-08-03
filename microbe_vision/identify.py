@@ -6,6 +6,7 @@ import os
 import time
 from typing import List
 
+import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -41,6 +42,7 @@ class Identify:
 
         self._parent = capture_frame_object
         self._captured_frames: List = capture_frame_object.get_captured_frames()
+        self._working_frames: List = self._captured_frames
         self._directory: str = capture_frame_object.get_directory()
 
         self._region_props_dataframe: pd.DataFrame = pd.DataFrame()
@@ -59,7 +61,7 @@ class Identify:
         Returns:
             None
         """
-        total_images = len(self._captured_frames)
+        total_images = len(self._working_frames)
         if images_to_show_count > total_images:
             raise ValueError(
                 'The number of images to show cannot be greater than the total number of images.')
@@ -68,9 +70,9 @@ class Identify:
 
         for i in range(0, total_images, jump):
             if use_gray_cmap:
-                plt.imshow(self._captured_frames[i], cmap='gray')
+                plt.imshow(self._working_frames[i], cmap='gray')
             else:
-                plt.imshow(self._captured_frames[i])
+                plt.imshow(self._working_frames[i])
             plt.suptitle(f'{i + 1}th Image')
             plt.show()
 
@@ -96,7 +98,7 @@ class Identify:
             updated_frames.append(binary_image)
 
         if is_update_frames:
-            self._captured_frames = updated_frames
+            self._working_frames = updated_frames
 
         print('Threshold applied successfully.')
         return updated_frames
@@ -113,8 +115,8 @@ class Identify:
             raise ValueError('The view properties cannot be None or empty.')
 
         region_props_dataframe = pd.DataFrame()
-        for frame_index in trange(len(self._captured_frames), desc='Generating region properties'):
-            labelled_frame = measure.label(self._captured_frames[frame_index])
+        for frame_index in trange(len(self._working_frames), desc='Generating region properties'):
+            labelled_frame = measure.label(self._working_frames[frame_index])
             properties = tuple(prop.value for prop in view_props)
             region_props = measure.regionprops_table(
                 labelled_frame, properties=properties)
@@ -212,7 +214,7 @@ class Identify:
         print('Objects segmented successfully using the omnipose model.')
 
         if is_update_frames:
-            self._captured_frames = masks
+            self._working_frames = masks
         return masks
 
     # Utility Methods
@@ -295,15 +297,39 @@ class Identify:
         if self._normalized_frames:
             print('Frames are already prepared for the omnipose model.')
             return
+        is_binary_frames = self.__are_frames_binary(self._working_frames)
+        if is_binary_frames:
+            self._working_frames = self.__convert_to_uint8(self._working_frames)
 
         normalized_frames = []
-        for frame_index in trange(len(self._captured_frames), desc='Preparing frames for the omnipose model'):
-            gray_image = cv2.cvtColor(
-                self._captured_frames[frame_index], cv2.COLOR_BGR2GRAY)
+        for frame_index in trange(len(self._working_frames), desc='Preparing frames for the omnipose model'):
+            gray_image = self._working_frames[frame_index] if is_binary_frames else cv2.cvtColor(
+                self._working_frames[frame_index], cv2.COLOR_BGR2GRAY)
             normalized_frame = normalize99(gray_image)
             normalized_frames.append(normalized_frame)
         self._normalized_frames = normalized_frames
         print('Frames prepared successfully for the omnipose model.')
+
+    def __are_frames_binary(self, frames: List) -> bool:
+        """
+        Checks if all frames are binary (contain only True or False values).
+        Args:
+            frames (List): The frames to be checked.
+        Returns:
+            bool: True if all frames are binary, False otherwise.
+        """
+        return all(np.array_equal(frame, frame.astype(bool)) for frame in frames)
+
+    def __convert_to_uint8(self, binary_frames: List) -> List:
+        """
+        Converts binary frames to uint8 format.
+        Args:
+            binary_frames (List): The binary frames to be converted.
+        Returns:
+            List: The converted frames in uint8 format.
+        """
+        uint8_frames = [(frame.astype(np.uint8) * 255) for frame in binary_frames]
+        return uint8_frames
 
     def __activate_gpu(self) -> bool:
         """
