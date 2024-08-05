@@ -28,8 +28,8 @@ setup(
         'tqdm==4.66.2',
         'trackpy==0.6.2',
     ],
-    author='Abhishek Shrivastava, Indraneel Vairagare',
-    author_email='ashrivastava@asu.edu, indraneel20&@gmail.com',
+    author='Abhishek Shrivastava, Samyabrata Sen, Indraneel Vairagare',
+    author_email='ashrivastava@asu.edu, ssen31@asu.edu, indraneel207@gmail.com',
     description='A 2D Microbe Vision Tracker package to track the movement of a subject in a video file.',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
@@ -39,5 +39,5 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    python_requires='>=3.6',
+    python_requires='3.10.11',
 )
