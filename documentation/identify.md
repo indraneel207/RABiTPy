@@ -6,7 +6,7 @@ The `Identify` class in the Microbe Vision package is responsible for performing
 
 ## Workflow
 
-![image](./images/identify.png)
+![image](./flow_charts/identify.png)
 
 ## Methods
 

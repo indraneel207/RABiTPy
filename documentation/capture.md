@@ -6,7 +6,7 @@ The `Capture` class in the Microbe Vision package is responsible for loading vid
 
 ## Workflow
 
-![image](./images/capture.png)
+![image](./flow_charts/capture.png)
 
 ## Class Attributes
 

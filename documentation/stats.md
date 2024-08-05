@@ -6,7 +6,7 @@ The `Stats` class in the Microbe Vision package is responsible for analyzing par
 
 ## Workflow
 
-![image](./images/stats.png)
+![image](./flow_charts/stats.png)
 
 ## Class Attributes
 

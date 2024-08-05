@@ -6,7 +6,7 @@ The `Tracker` class in the Microbe Vision package is responsible for tracking pa
 
 ## Workflow
 
-![image](./images/track.png)
+![image](./flow_charts/track.png)
 
 ## Class Attributes
 
