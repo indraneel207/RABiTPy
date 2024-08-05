@@ -2,19 +2,29 @@
 
 Microbe Vision is a comprehensive package designed to track and analyze the movement of microorganisms in video files or image sequences. This package provides tools for loading, identifying, tracking, and analyzing the movement of various organisms.
 
+## Features
+
+- **Capture**: Load video files or image sequences and convert them into frames.
+- **Identify**: Detect and identify microorganisms using thresholding or advanced Omnipose masking.
+- **Tracker**: Track identified organisms across frames, applying filters to retain meaningful tracks.
+- **Stats**: Analyze tracked organisms to calculate speed, movement patterns, and other metrics.
+
 ## Installation
+
+***NOTE: Use the python version 3.10.11***
 
 1. First, install the package:
 
     ```sh
-    pip install microbe_vision
+    pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple microbe-vision
+    <!-- pip install microbe_vision -->
     ```
 
-2. Then, install the additional dependencies from the `requirements.txt`:
+2. Use this specific command to install the Omnipose
 
     ```sh
-    pip install -r requirements.txt
-    ```
+    pip install git+https://github.com/kevinjohncutler/omnipose.git@63045b1af0d52174dee7ff18e94c7cfd84ddd2ff
+    ````
 
 ## Usage
 
@@ -29,6 +39,15 @@ Microbe Vision consists of four main classes:
 3. **Tracker**: This class tracks each identified node across frames and filters them based on criteria such as the minimum number of frames they appear in or minimal displacement across frames. This step ensures that only meaningful tracks are retained for analysis.
 
 4. **Stats**: This class computes various statistics about the tracked organisms, such as their speed, correlation of movements, and other relevant metrics. It records these statistics for further analysis.
+
+## Documentation
+
+For detailed usage and examples, refer to the documentation for each class:
+
+- [Capture Class Documentation](documentation/capture.md)
+- [Identify Class Documentation](documentation/identify.md)
+- [Tracker Class Documentation](documentation/track.md)
+- [Stats Class Documentation](documentation/stats.md)
 
 ### Example Workflow
 
@@ -49,6 +68,7 @@ Each class in the workflow passes its output to the next class, ensuring a seaml
 ## Authors
 
 - Abhishek Shrivastava
+- Samyabrata Sen
 - Indraneel Vairagare
 
 ## License
@@ -57,4 +77,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgements
 
-Special thanks to the developers of the Omnipose and Trackpy libraries, which are integral to this package's functionality.
+We extend our thanks to the developers of the Omnipose and Trackpy libraries, which are essential to the functionality of this package.
