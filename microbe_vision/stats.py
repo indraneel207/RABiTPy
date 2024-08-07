@@ -31,7 +31,7 @@ class Stats:
         self._sorted_dataframe = tracker_object._linked_particles_dataframes
         self._directory: str = tracker_object.get_directory()
         self._capture_speed_in_fps = tracker_object._parent._parent.get_frame_rate()
-        self._pixel_to_um: float = tracker_object._parent._parent.get_pixel_to_um()
+        self.pixel_scale_factor: float = tracker_object._parent._parent.get_pixel_scale_factor()
         self._mean_array: List[float] = []
 
     def calculate_and_plot_mean(self, plots_per_row: int = 4, distribution_type: any = DEFAULT_DISTRIBUTION) -> np.ndarray:
@@ -99,7 +99,7 @@ class Stats:
         x_diff = np.diff(x)
         y_diff = np.diff(y)
         distance = np.sqrt(x_diff**2 + y_diff**2)
-        distance_in_um = distance * self._pixel_to_um
+        distance_in_um = distance * self.pixel_scale_factor
         time = particle_data['frame']
         time_diff = np.diff(time)
         time_in_seconds = time_diff / self._capture_speed_in_fps
@@ -154,27 +154,20 @@ class Stats:
         for j in range(start_idx, len(axes)):
             fig.delaxes(axes[j])
 
-    def plot_overall_mean_speed_distribution(self, distribution_type: any = DEFAULT_DISTRIBUTION) -> None:
+    def plot_overall_mean_speed_distribution(self, bins: int = 10) -> None:
         """
         Plot the overall mean speed distribution.
 
         Args:
-            mean_array (np.ndarray): Array of mean speeds for each particle.
-
+            bins (int): Number of bins for the histogram.
         Returns:
             None
         """
         # Normalize the overall distribution of mean_array
         fig, ax = plt.subplots(figsize=(10, 6))
         mean_array = np.array(self._mean_array)
-        mean_distribution = distfit(distr=distribution_type)
-        mean_distribution.fit_transform(mean_array)
-        
-        mean_distribution.plot(ax=ax)
-        ax.hist(mean_array, bins='auto', density=True,
-                 alpha=0.7, label='Mean Speeds')
+        ax.hist(mean_array, bins=bins, density=True, alpha=0.7, label='Mean Speeds')
         ax.set_title('Overall Mean Speed Distribution')
-        ax.legend()
         plt.show()
 
     def save_mean_speeds(self, filename: str) -> None:

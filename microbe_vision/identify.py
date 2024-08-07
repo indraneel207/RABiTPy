@@ -6,9 +6,9 @@ import os
 import time
 from typing import List
 
-import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from cellpose_omni import core, models  # type: ignore
 from cellpose_omni.models import MODEL_NAMES
@@ -52,12 +52,14 @@ class Identify:
         self._omnipose_params: dict = {}
         self._mask_store_path: str = ''
 
-    def show_frames(self, images_to_show_count: int = 5, use_gray_cmap: bool = False) -> None:
+    def show_frames(self, images_to_show_count: int = 5, images_per_row: int = 5, use_gray_cmap: bool = False, image_size: tuple = (5, 5)) -> None:
         """
         Displays the captured frames.
         Args:
-            images_to_show_count (int): The number of (equidistant) images to show.
+            images_to_show_count (int): The number of (equidistant) images to show. Default is 5.
+            images_per_row (int): The number of images to show per row. Default is 5.
             use_gray_cmap (bool): Whether to use a grayscale colormap.
+            image_size (tuple): The size of the image to display. Default is (5, 5).
         Returns:
             None
         """
@@ -66,15 +68,41 @@ class Identify:
             raise ValueError(
                 'The number of images to show cannot be greater than the total number of images.')
 
-        jump = total_images // images_to_show_count
+        if images_per_row <= 0:
+            raise ValueError(
+                'The number of images per row cannot be negative.')
 
-        for i in range(0, total_images, jump):
+        jump = total_images // images_to_show_count
+        selected_images_indices = range(0, total_images, jump)[
+            :images_to_show_count]
+
+        # Determine the number of rows based on the user input
+        n_cols = images_per_row
+        n_rows = int(np.ceil(images_to_show_count / n_cols))
+
+        # Calculate dynamic figure size
+        fig_width = n_cols * image_size[0]
+        fig_height = n_rows * image_size[1]
+
+        fig, axes = plt.subplots(
+            n_rows, n_cols, figsize=(fig_width, fig_height))
+        axes = axes.flatten()  # Flatten in case the axes array is multidimensional
+
+        for idx, img_idx in enumerate(selected_images_indices):
+            ax = axes[idx]
             if use_gray_cmap:
-                plt.imshow(self._working_frames[i], cmap='gray')
+                ax.imshow(self._working_frames[img_idx], cmap='gray')
             else:
-                plt.imshow(self._working_frames[i])
-            plt.suptitle(f'{i + 1}th Image')
-            plt.show()
+                ax.imshow(self._working_frames[img_idx])
+            ax.set_title(f'Image {img_idx + 1}')
+            ax.axis('off')  # Hide axes for better visualization
+
+        # Hide any remaining subplots if there are fewer images than subplot slots
+        for i in range(images_to_show_count, len(axes)):
+            axes[i].axis('off')
+
+        plt.tight_layout()
+        plt.show()
 
     # Nominal Methods
     def apply_grayscale_thresholding(self, threshold: float = 0.5, is_update_frames: bool = True) -> List:
@@ -229,12 +257,23 @@ class Identify:
         if show_time:
             plt.scatter(self._region_props_dataframe['centroid_y'], self._region_props_dataframe['centroid_x'],
                         s=5, c=self._region_props_dataframe['frame'], cmap="jet_r")
-            plt.colorbar()
+
+            # Add color bar with label
+            color_bar = plt.colorbar()
+            color_bar.set_label('Frame Number')
         else:
             plt.scatter(self._region_props_dataframe['centroid_y'],
                         self._region_props_dataframe['centroid_x'], s=5, color='black')
+        # Add title
+        plt.title('Scatter Plot of Centroids Over Frames')
+
+        # Add axis labels
+        plt.xlabel('Pixel Y')
+        plt.ylabel('Pixel X')
+
         plt.gca().invert_yaxis()
         plt.gca().set_aspect('equal', adjustable='box')
+        plt.grid(False)
         plt.show()
 
     def save_identified_objects_to_csv(self, output_file_name='identified_objects') -> None:
@@ -299,7 +338,8 @@ class Identify:
             return
         is_binary_frames = self.__are_frames_binary(self._working_frames)
         if is_binary_frames:
-            self._working_frames = self.__convert_to_uint8(self._working_frames)
+            self._working_frames = self.__convert_to_uint8(
+                self._working_frames)
 
         normalized_frames = []
         for frame_index in trange(len(self._working_frames), desc='Preparing frames for the omnipose model'):
@@ -328,7 +368,8 @@ class Identify:
         Returns:
             List: The converted frames in uint8 format.
         """
-        uint8_frames = [(frame.astype(np.uint8) * 255) for frame in binary_frames]
+        uint8_frames = [(frame.astype(np.uint8) * 255)
+                        for frame in binary_frames]
         return uint8_frames
 
     def __activate_gpu(self) -> bool:
