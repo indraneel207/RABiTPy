@@ -151,12 +151,15 @@ class Capture:
         """
         return self._pixel_scale_factor
 
-    def load_images_as_frames(self, folder_path, capture_speed_in_fps=DEFAULT_CAPTURE_SPEED_IN_FPS, pixel_scale_factor=DEFAULT_PIXEL_SCALE_FACTOR):
+    def load_images_as_frames(self, folder_path, capture_speed_in_fps=DEFAULT_CAPTURE_SPEED_IN_FPS, pixel_scale_factor=DEFAULT_PIXEL_SCALE_FACTOR, scale_units=DEFAULT_SCALE_UNITS):
         """
         Loads all images from the given folder as frames in alphabetical order of the filenames.
 
         Args:
           folder_path (str): The path of the folder containing the images.
+          capture_speed_in_fps (int, optional): The capture speed in frames per second. Defaults to DEFAULT_CAPTURE_SPEED_IN_FPS.
+          pixel_scale_factor (float, optional): The pixel scale factor. Defaults to DEFAULT_PIXEL_SCALE_FACTOR.
+          scale_units (str, optional): The scale units. Defaults to DEFAULT_SCALE_UNITS.
 
         Raises:
           FileNotFoundError: If the specified folder is not found.

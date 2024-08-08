@@ -115,9 +115,9 @@ class Identify:
             List: The updated frames after applying grayscale thresholding.
         """
         updated_frames: List = []
-        if threshold < 0 or threshold > 255:
+        if threshold < 0 or threshold > 1:
             raise ValueError(
-                'The threshold value should be between 0 and 255.')
+                'The threshold value should be between 0 and 1.')
 
         for frame_index in trange(len(self._captured_frames), desc='Applying grayscale thresholding'):
             gray_scale = rgb2gray(self._captured_frames[frame_index])

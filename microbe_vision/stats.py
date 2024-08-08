@@ -34,7 +34,7 @@ class Stats:
         self.pixel_scale_factor: float = tracker_object._parent._parent.get_pixel_scale_factor()
         self._mean_array: List[float] = []
 
-    def calculate_and_plot_mean(self, plots_per_row: int = 4, distribution_type: any = DEFAULT_DISTRIBUTION) -> np.ndarray:
+    def calculate_speed_and_plot_mean(self, plots_per_row: int = 4, distribution_type: any = DEFAULT_DISTRIBUTION) -> np.ndarray:
         """
         Calculate the mean array of speeds for each particle and plot the distributions.
 
