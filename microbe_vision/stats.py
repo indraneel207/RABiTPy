@@ -120,7 +120,7 @@ class Stats:
         Returns:
             float: Mean speed of the particle.
         """
-        speed_distribution = distfit(distr=distribution_type)
+        speed_distribution = distfit(distr=distribution_type, verbose=0)
         speed_distribution.fit_transform(speed)
         mean_speed = speed_distribution.model['loc']
 
