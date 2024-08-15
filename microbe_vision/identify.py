@@ -131,6 +131,25 @@ class Identify:
         print('Threshold applied successfully.')
         return updated_frames
 
+    def apply_color_inverse(self, is_update_frames: bool = True) -> List:
+        """
+        Applies color inverse to the captured frames.
+        Args:
+            is_update_frames (bool): Whether to update the captured frames.
+        Returns:
+            List: The updated frames after applying color inverse.
+        """
+        updated_frames: List = []
+        for frame_index in trange(len(self._captured_frames), desc='Applying color inverse'):
+            inverted_frame = cv2.bitwise_not(self._captured_frames[frame_index])
+            updated_frames.append(inverted_frame)
+
+        if is_update_frames:
+            self._working_frames = updated_frames
+
+        print('Color inverse applied successfully.')
+        return updated_frames
+
     def generate_region_props_to_dataframe(self, view_props: List[AvailableProps]) -> pd.DataFrame:
         """
         Generates region properties for the captured frames.
