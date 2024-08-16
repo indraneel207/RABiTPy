@@ -234,6 +234,16 @@ class Tracker:
         """
         return self._directory
 
+    def set_linked_particles_dataframes(self, linked_particles_dataframes: pd.DataFrame) -> None:
+        """
+        Set the linked particles dataframes.
+        Args:
+            linked_particles_dataframes (pd.DataFrame): The linked particles dataframes.
+        Returns:
+            None
+        """
+        self._linked_particles_dataframes = linked_particles_dataframes
+
     # Private methods
     def __shape_and_sort_dataframe(self, dataframe: pd.DataFrame, cols: list[str], sort_by: list[str]) -> pd.DataFrame:
         """

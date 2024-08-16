@@ -177,7 +177,7 @@ class Stats:
         # Normalize the overall distribution of mean_array
         fig, ax = plt.subplots(figsize=(10, 6))
         mean_array = np.array(self._mean_array)
-        ax.hist(mean_array, bins=bins, density=True, alpha=0.7, label='Mean Speeds')
+        ax.hist(mean_array, bins=bins, density=False, alpha=0.7, label='Mean Speeds')
         ax.set_title('Overall Mean Speed Distribution')
         plt.show()
 
