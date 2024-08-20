@@ -24,18 +24,17 @@ class Utility:
 
         Args:
             csv_file_paths (List[str]): List of file paths to the CSVs to be combined.
-            working_directory (str, optional): The working directory where files are stored. Defaults to Capture.DEFAULT_FILE_DIRECTORY.
-            pixel_scale_factor (float, optional): The pixel scale factor. Defaults to Capture.DEFAULT_PIXEL_SCALE_FACTOR.
-            scale_units (str, optional): The scale units. Defaults to Capture.DEFAULT_SCALE_UNITS.
-            capture_speed_in_fps (int, optional): The capture speed in frames per second. Defaults to Capture.DEFAULT_CAPTURE_SPEED_IN_FPS.
+            working_directory (str, optional): The working directory where files are stored. Defaults to 'input_files'.
+            pixel_scale_factor (float, optional): The pixel scale factor. Defaults to 1.
+            scale_units (str, optional): The scale units. Defaults to 'units'.
+            capture_speed_in_fps (int, optional): The capture speed in frames per second. Defaults to 15.
 
         Returns:
             Tracker: A Tracker object with the combined linked DataFrames.
         """
         # Step 1: Create the Capture object and simulate loading frames (since video is already processed)
         capture = Capture(working_directory=working_directory)
-        capture.load_images_as_frames(
-            folder_path=Capture.DEFAULT_STORE_IMAGE_FILE_DIRECTORY,
+        capture.set_properties(
             capture_speed_in_fps=capture_speed_in_fps,
             pixel_scale_factor=pixel_scale_factor,
             scale_units=scale_units

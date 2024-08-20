@@ -287,8 +287,8 @@ class Identify:
         plt.title('Scatter Plot of Centroids Over Frames')
 
         # Add axis labels
-        plt.xlabel('Pixel Y')
-        plt.ylabel('Pixel X')
+        plt.xlabel('Pixel X')
+        plt.ylabel('Pixel Y')
 
         plt.gca().invert_yaxis()
         plt.gca().set_aspect('equal', adjustable='box')

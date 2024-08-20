@@ -184,6 +184,19 @@ class Capture:
         print(f'{len(frames)} frames loaded from folder: {complete_folder_path}')
         return frames
 
+    def set_properties(self, pixel_scale_factor: float = DEFAULT_PIXEL_SCALE_FACTOR, scale_units: str = DEFAULT_SCALE_UNITS, capture_speed_in_fps = None):
+        """
+        Sets the properties of the Capture object.
+
+        Args:
+          pixel_scale_factor (float, optional): The pixel scale factor. Defaults to 1.
+          scale_units (str, optional): The scale units. Defaults to 'units'.
+          capture_speed_in_fps (int, optional): Capture speed in frames/sec. Defaults to 15.
+        """
+        self._pixel_scale_factor = pixel_scale_factor
+        self._scale_units = scale_units
+        self._actual_fps = capture_speed_in_fps
+
     # Private Methods
     def __capture_images_from_video(self,
                                     is_store_video_frames=False,

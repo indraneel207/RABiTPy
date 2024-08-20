@@ -32,6 +32,8 @@ class Tracker:
         self._parent = identify_object
         self._region_props_dataframe: pd.DataFrame = identify_object.get_region_props_dataframe()
         self._directory: str = identify_object.get_directory()
+        self._capture_speed_in_fps = identify_object._parent.get_frame_rate()
+        self._pixel_scale_factor: float = identify_object._parent.get_pixel_scale_factor()
         self._linked_particles_dataframes: pd.DataFrame = pd.DataFrame()
         self._position_columns: list[str] = self.DEFAULT_POSITION_COLUMNS
 
@@ -101,6 +103,54 @@ class Tracker:
 
         return result_dataframe
 
+    def compute_plot_save_MSD(self, max_lag_time: int = 100, is_save: bool = False, output_file_name: str = 'Mean_Squared_Difference') -> pd.DataFrame:
+        """
+        Calculate the Mean Squared Displacement (MSD) of the particles.
+        Args:
+            max_lag_time (int): Maximum lag time to calculate the MSD. Default is 100.
+            is_save (bool): Whether to save the MSD values to a CSV file. Default is False.
+            output_file_name (str): Name of the output file to save the MSD values. Default is 'Mean_Squared_Difference'.
+        Returns:
+            pd.DataFrame: DataFrame containing the MSD values.
+        """
+        if self._linked_particles_dataframes.empty:
+            raise ValueError("No linked dataframes available. Please link particles first.")
+
+        # Calculate the MSD
+        msd_dataframe = tp.imsd(
+            self._linked_particles_dataframes, mpp=self._pixel_scale_factor, fps=self._capture_speed_in_fps, max_lagtime=max_lag_time, pos_columns=self._position_columns[::-1])
+
+        # Calculate the EMSD
+        emsd_dataframe = tp.emsd(
+            self._linked_particles_dataframes, mpp=self._pixel_scale_factor, fps=self._capture_speed_in_fps, max_lagtime=max_lag_time, pos_columns=self._position_columns[::-1])
+
+        # Create subplots
+        _, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6), dpi=300)
+
+        # Plot MSD
+        ax1.plot(msd_dataframe.index, msd_dataframe, 'k-', alpha=0.1)  # black lines, semitransparent
+        ax1.set_xscale('log')
+        ax1.set_yscale('log')
+        ax1.set(ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]', xlabel='lag time $t$')
+        ax1.set_title('Mean Squared Displacement (MSD)')
+
+        # Plot EMSD
+        ax2.plot(emsd_dataframe.index, emsd_dataframe, 'bo')
+        ax2.set_xscale('log')
+        ax2.set_yscale('log')
+        ax2.set(ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]', xlabel='lag time $t$')
+        ax2.set_title('Ensemble Mean Squared Displacement (EMSD)')
+
+        plt.show()
+
+        # Save the MSD values to a CSV file
+        if is_save:
+            output_path = os.path.join(self._directory, f'{output_file_name}.csv')
+            msd_dataframe.to_csv(output_path, index=False)
+            print(f'MSD values saved to {output_path}')
+
+        return msd_dataframe
+
     def save_linked_dataframes(self, output_file_name: str) -> None:
         """
         Save the linked dataframes to a CSV file.
@@ -146,10 +196,17 @@ class Tracker:
 
         sns.scatterplot(data=sorted_dataframe, x='centroid_y',
                         y='centroid_x', hue='particle', palette='bright', s=8)
+        # Add axis titles
+        plt.xlabel('Centroid X')
+        plt.ylabel('Centroid Y')
+
         plt.gca().invert_yaxis()
         plt.gca().set_title('Scatter plot of the trajectories')
+
+        n_cols = len(sorted_dataframe) // 20000 if len(sorted_dataframe) > 20000 else 1
+
         plt.legend(title='Particle ID', bbox_to_anchor=(
-            1.05, 1), loc='upper left', borderaxespad=0.)
+            1.05, 1), loc='upper left', borderaxespad=0., ncols=n_cols)
         plt.show()
 
     def visualize_particle_trajectories_from_origin(self, show_axes: bool = True):
@@ -183,6 +240,10 @@ class Tracker:
         sns.scatterplot(data=shifted_df, x='shifted_centroid_y',
                         y='shifted_centroid_x', hue='particle', palette='bright', s=50)
 
+        # Add axis titles
+        plt.xlabel('Centroid X')
+        plt.ylabel('Centroid Y')
+
         # Connect the points to show the track
         for particle_id in shifted_df['particle'].unique():
             particle_data = shifted_df[shifted_df['particle'] == particle_id]
@@ -200,9 +261,11 @@ class Tracker:
             plt.axhline(0, color='black', linewidth=1)
             plt.axvline(0, color='black', linewidth=1)
 
+        n_cols = len(particle_data) // 20000 if len(particle_data) > 20000 else 1
+
         # Move the legend box outside the plot and give it a title
         plt.legend(title='Particle ID', bbox_to_anchor=(
-            1.05, 1), loc='upper left', borderaxespad=0.)
+            1.05, 1), loc='upper left', borderaxespad=0., ncols=n_cols)
 
         plt.show()
 
@@ -221,8 +284,8 @@ class Tracker:
             cbar=True
         )
         plt.title('Heatmap of Particle Densities')
-        plt.xlabel('Centroid Y')
-        plt.ylabel('Centroid X')
+        plt.xlabel('Centroid X')
+        plt.ylabel('Centroid Y')
         plt.gca().invert_yaxis()
         plt.show()
 
