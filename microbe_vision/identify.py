@@ -14,6 +14,16 @@ from cellpose_omni import core, models  # type: ignore
 from cellpose_omni.models import MODEL_NAMES
 from omnipose.utils import normalize99  # type: ignore
 from skimage import measure
+from skimage.filters import ( # pylint: disable=E0611
+    try_all_threshold, # pylint: disable=E0611
+    threshold_otsu, # pylint: disable=E0611
+    threshold_isodata, # pylint: disable=E0611
+    threshold_li, # pylint: disable=E0611
+    threshold_mean, # pylint: disable=E0611
+    threshold_minimum, # pylint: disable=E0611
+    threshold_triangle, # pylint: disable=E0611
+    threshold_yen # pylint: disable=E0611
+) # pylint: disable=E0611
 from skimage.color import rgb2gray
 from tqdm import trange
 
@@ -129,6 +139,122 @@ class Identify:
             self._working_frames = updated_frames
 
         print('Threshold applied successfully.')
+        return updated_frames
+
+    def try_all_algorithm_based_thresholding(self, frame_index: int = 0) -> None:
+        """
+        Applies thresholding algorithms from the scikit-image library to the captured frames.
+        Read more about it here: https://scikit-image.org/docs/stable/api/skimage.filters.html#skimage.filters.try_all_threshold
+        NOTE: The function might show dark objects over a light background. But for actual implementation, opposite is required.
+        Args:
+            frame_index (int): The index of the frame to apply the thresholding to. Default is 0.
+        Returns:
+            None
+        """
+        gray_image = rgb2gray(self._captured_frames[frame_index])
+        fig, ax = try_all_threshold(gray_image, figsize=(10, 8), verbose=False)
+        print("Following thresholding algorithms are applied: 'isodata', 'li', 'mean', 'minimum', 'otsu', 'triangle', 'yen'")
+        plt.show()
+
+    def apply_algorithm_based_thresholding(self, algorithm: str = 'otsu', is_color_inverse: bool = False, is_update_frames: bool = True, **kwargs) -> List:
+        """
+        Applies algorithm-based thresholding to the captured frames.
+        NOTE: If the dark objects over a light background are getting displayed, Put 'is_color_inverse' to True to correct it before moving to the next step.
+        Args:
+            algorithm (str): The algorithm to use for thresholding. 
+                'otsu', 'isodata', 'li', 'mean', 'minimum', 'otsu', 'triangle', 'yen' are the available options.
+                Default is 'otsu'.
+            is_update_frames (bool): Whether to update the captured frames.
+            is_color_inverse (bool): Whether to invert the colors. Default is False.
+            **kwargs: Additional keyword arguments for the thresholding algorithms. 
+                Check the skimage documentation for more information on other passable args
+                Link: https://scikit-image.org/docs/stable/api/skimage.filters.html
+        Returns:
+            List: The updated frames after applying algorithm-based thresholding.
+        """
+
+        # Mapping of available algorithms to their corresponding functions
+        algorithm_function_map = {
+            'otsu': threshold_otsu,
+            'isodata': threshold_isodata,
+            'li': threshold_li,
+            'mean': threshold_mean,
+            'minimum': threshold_minimum,
+            'triangle': threshold_triangle,
+            'yen': threshold_yen
+        }
+
+        if algorithm not in algorithm_function_map:
+            raise ValueError(
+                f"Algorithm '{algorithm}' is not recognized. Available algorithms: {list(algorithm_function_map.keys())}")
+
+        # Retrieve the threshold function based on the selected algorithm
+        threshold_function = algorithm_function_map[algorithm]
+        updated_frames: List = []
+
+        for frame_index in trange(len(self._captured_frames), desc='Applying algorithm-based thresholding'):
+            gray_scale = rgb2gray(self._captured_frames[frame_index])
+            
+            # Invert the colors if required
+            gray_scale = 1 - gray_scale if is_color_inverse else gray_scale
+
+            threshold_value = threshold_function(gray_scale)
+            binary_image = gray_scale > threshold_value
+            updated_frames.append(binary_image)
+
+        if is_update_frames:
+            self._working_frames = updated_frames
+
+        print(f'Selected {algorithm} Algorithm-based thresholding applied successfully.')
+        print(
+        "NOTE: If dark objects are displayed over a light background, set 'is_color_inverse' to True "
+        "and redo the thresholding to correct it before proceeding to the next step."
+        )
+
+        return updated_frames
+
+    def apply_gaussian_adaptive_thresholding(self, block_size: int = 11, c: int = 2, is_color_inverse: bool = False, is_update_frames: bool = True) -> List:
+        """
+        Applies Gaussian adaptive thresholding to the captured frames.
+        NOTE: If the dark objects over a light background are getting displayed, Put 'is_color_inverse' to True to correct it before moving to the next step.
+        Args:
+            block_size (int): The size of the block for adaptive thresholding. Default is 11.
+            c (int): The constant to subtract from the mean. Default is 2.
+            is_color_inverse (bool): Whether to invert the colors. Default is False.
+            is_update_frames (bool): Whether to update the captured frames.
+        Returns:
+            List: The updated frames after applying Gaussian adaptive thresholding.
+        """
+        updated_frames: List = []
+        for frame_index in trange(len(self._captured_frames), desc='Applying Gaussian adaptive thresholding'):
+            gray_scale = rgb2gray(self._captured_frames[frame_index])
+            gray_scale = (gray_scale * 255).astype('uint8')
+
+            # Apply Gaussian adaptive thresholding
+            thresholded_image = cv2.adaptiveThreshold(
+                gray_scale, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block_size, c
+            )
+
+            # Convert thresholded image to binary format (True/False)
+            binary_image = thresholded_image > 0  # This creates a boolean array (True/False)
+
+            # Convert to 0/1 representation
+            binary_image = binary_image.astype(int)
+
+            # Invert the binary image if is_color_inverse is True
+            if is_color_inverse:
+                binary_image = 1 - binary_image  # Inverts the binary image
+
+            updated_frames.append(binary_image)
+
+        if is_update_frames:
+            self._working_frames = updated_frames
+
+        print('Gaussian adaptive thresholding applied successfully.')
+        print(
+        "NOTE: If dark objects are displayed over a light background, set 'is_color_inverse' to True "
+        "and redo the thresholding to correct it before proceeding to the next step."
+        )
         return updated_frames
 
     def apply_color_inverse(self, is_update_frames: bool = True) -> List:
