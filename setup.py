@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='microbe_vision',
-    version='0.1.1-alpha',
+    version='0.1.2-alpha',
     packages=find_packages(),
     install_requires=[
         # Add your package dependencies here
@@ -28,8 +28,8 @@ setup(
         'tqdm==4.66.2',
         'trackpy==0.6.2',
     ],
-    author='Abhishek Shrivastava, Samyabrata Sen, Indraneel Vairagare',
-    author_email='ashrivastava@asu.edu, ssen31@asu.edu, indraneel207@gmail.com',
+    author='Indraneel Vairagare, Abhishek Shrivastava, Samyabrata Sen',
+    author_email='indraneel207@gmail.com, ashrivastava@asu.edu, ssen31@asu.edu',
     description='A 2D Microbe Vision Tracker package to track the movement of a subject in a video file.',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
