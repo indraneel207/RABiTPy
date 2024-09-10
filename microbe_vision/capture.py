@@ -15,8 +15,9 @@ class Capture:
     DEFAULT_FILE_DIRECTORY = 'input_files'
     DEFAULT_STORE_IMAGE_FILE_DIRECTORY = 'frames_from_video'
     SUPPORTED_INPUT_VIDEO_FILE_TYPES = ['avi', 'mp4', 'mpg', 'mpeg']
+    DEFAULT_PIXEL_SCALE_FACTOR = 1
+    DEFAULT_SCALE_UNITS = 'units'
     DEFAULT_CAPTURE_SPEED_IN_FPS = 15
-    DEFAULT_PIXEL_TO_MICRON = 0.166666666666666
 
     def __init__(self, working_directory=DEFAULT_FILE_DIRECTORY):
         """
@@ -31,7 +32,9 @@ class Capture:
         self._video_file_path: str = ''
         self._video_file_name: str = ''
         self._video_capture_speed: int = 0
-        self._pixel_to_um: float = 0.0
+        self._actual_fps: int = 0
+        self._pixel_scale_factor: float = 0.0
+        self._scale_units: str = ''
         self._video_frames_store_path: str = ''
         self._captured_frames: list = []
 
@@ -58,7 +61,7 @@ class Capture:
             video = cv2.VideoCapture(self._video_file_path)
             try:
                 default_video_fps = self.__print_video_info_and_get_fps(video)
-                Capture.DEFAULT_CAPTURE_SPEED_IN_FPS = default_video_fps
+                self._video_capture_speed = default_video_fps
             finally:
                 video.release()
 
@@ -68,16 +71,18 @@ class Capture:
         except FileNotFoundError as e:
             print(e)
 
-    def process_video_into_frames(self, pixel_to_um: float,
+    def process_video_into_frames(self, pixel_scale_factor: float = DEFAULT_PIXEL_SCALE_FACTOR,
+                                       scale_units: str = DEFAULT_SCALE_UNITS,
                                        capture_speed_in_fps = None,
                                        is_store_video_frames = False,
                                        store_images_path = DEFAULT_STORE_IMAGE_FILE_DIRECTORY) -> list:
         """
         Processes the already loaded video into frames based on the given pixel to micrometer conversion factor and capture speed.
-        The pixel_to_um is mandatory to process the video into frames else will give an error.
+        The pixel_scale_factor is mandatory to process the video into frames else will give an error.
 
         Args:
-          pixel_to_um (float): The pixel to micrometer conversion factor.
+          pixel_scale_factor (float, optional): The pixel scale factor. Defaults to DEFAULT_PIXEL_SCALE_FACTOR.
+          scale_units (str, optional): The scale units. Defaults to DEFAULT_SCALE_UNITS.
           capture_speed_in_fps (int, optional): Capture speed in frames/sec. Defaults to given video FPS or 15.
           is_store_video_frames (bool, optional): Flag to store video frames. Defaults to False.
           store_images_path (str, optional): Path to store images. Defaults to DEFAULT_STORE_IMAGE_FILE_DIRECTORY.
@@ -89,21 +94,25 @@ class Capture:
           ValueError: If the pixel to micrometer conversion factor is not provided.
         """
         try:
-            if not pixel_to_um:
-                raise ValueError('Error: A valid Pixel to Micron ratio is mandatory to process the video and calculate the stats')
+            if not pixel_scale_factor:
+                raise ValueError('Error: A valid Pixel Scale factor is mandatory to process the video and calculate the stats')
 
-            if capture_speed_in_fps is None:
-                capture_speed_in_fps = Capture.DEFAULT_CAPTURE_SPEED_IN_FPS
+            # If the user provides the capture speed in FPS, then use that value else use the video FPS
+            if capture_speed_in_fps:
+                self._actual_fps = capture_speed_in_fps
+            else:
+                capture_speed_in_fps = self._video_capture_speed
+                self._actual_fps = self._video_capture_speed
 
             captured_frames = []
-            self._video_capture_speed = capture_speed_in_fps
-            self._pixel_to_um = pixel_to_um
+            self._pixel_scale_factor = pixel_scale_factor
+            self._scale_units = scale_units
 
             captured_frames = self.__capture_images_from_video(is_store_video_frames,
                                                                store_images_path)
             self._captured_frames = captured_frames
             print(
-                f'Processed video into frames successfully with pixel to um: {self._pixel_to_um}'
+                f'Processed video into frames successfully with pixel scale factor: {self._pixel_scale_factor} {self._scale_units}'
             )
             return captured_frames
         except ValueError as e:
@@ -132,28 +141,32 @@ class Capture:
         Returns:
           str: The frame rate.
         """
-        return self._video_capture_speed
+        return self._actual_fps
 
-    def get_pixel_to_um(self):
+    def get_pixel_scale_factor(self):
         """
         Retrieves the pixel to micrometer conversion factor.
         Returns:
           float: The pixel to micrometer conversion factor.
         """
-        return self._pixel_to_um
+        return self._pixel_scale_factor
 
-    def load_images_as_frames(self, folder_path, capture_speed_in_fps=DEFAULT_CAPTURE_SPEED_IN_FPS, pixel_to_um=DEFAULT_PIXEL_TO_MICRON):
+    def load_images_as_frames(self, folder_path, capture_speed_in_fps=DEFAULT_CAPTURE_SPEED_IN_FPS, pixel_scale_factor=DEFAULT_PIXEL_SCALE_FACTOR, scale_units=DEFAULT_SCALE_UNITS):
         """
         Loads all images from the given folder as frames in alphabetical order of the filenames.
 
         Args:
           folder_path (str): The path of the folder containing the images.
+          capture_speed_in_fps (int, optional): The capture speed in frames per second. Defaults to DEFAULT_CAPTURE_SPEED_IN_FPS.
+          pixel_scale_factor (float, optional): The pixel scale factor. Defaults to DEFAULT_PIXEL_SCALE_FACTOR.
+          scale_units (str, optional): The scale units. Defaults to DEFAULT_SCALE_UNITS.
 
         Raises:
           FileNotFoundError: If the specified folder is not found.
         """
         self._video_capture_speed = capture_speed_in_fps
-        self._pixel_to_um = pixel_to_um
+        self._actual_fps = capture_speed_in_fps
+        self._pixel_scale_factor = pixel_scale_factor
 
         complete_folder_path = os.path.join(self._directory, folder_path)
         if not os.path.isdir(complete_folder_path):
@@ -170,6 +183,19 @@ class Capture:
         self._captured_frames = frames
         print(f'{len(frames)} frames loaded from folder: {complete_folder_path}')
         return frames
+
+    def set_properties(self, pixel_scale_factor: float = DEFAULT_PIXEL_SCALE_FACTOR, scale_units: str = DEFAULT_SCALE_UNITS, capture_speed_in_fps = None):
+        """
+        Sets the properties of the Capture object.
+
+        Args:
+          pixel_scale_factor (float, optional): The pixel scale factor. Defaults to 1.
+          scale_units (str, optional): The scale units. Defaults to 'units'.
+          capture_speed_in_fps (int, optional): Capture speed in frames/sec. Defaults to 15.
+        """
+        self._pixel_scale_factor = pixel_scale_factor
+        self._scale_units = scale_units
+        self._actual_fps = capture_speed_in_fps
 
     # Private Methods
     def __capture_images_from_video(self,
@@ -197,7 +223,7 @@ class Capture:
             video.release()
 
         print(f'{len(captured_frames)} frame(s) captured successfully '
-              f'for the given FPS: {self._video_capture_speed} to the '
+              f'for the video FPS: {self._video_capture_speed} to the '
               f'folder: {self._video_frames_store_path}'
             )
         return captured_frames

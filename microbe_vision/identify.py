@@ -6,14 +6,24 @@ import os
 import time
 from typing import List
 
-import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from cellpose_omni import core, models  # type: ignore
 from cellpose_omni.models import MODEL_NAMES
 from omnipose.utils import normalize99  # type: ignore
 from skimage import measure
+from skimage.filters import ( # pylint: disable=E0611
+    try_all_threshold, # pylint: disable=E0611
+    threshold_otsu, # pylint: disable=E0611
+    threshold_isodata, # pylint: disable=E0611
+    threshold_li, # pylint: disable=E0611
+    threshold_mean, # pylint: disable=E0611
+    threshold_minimum, # pylint: disable=E0611
+    threshold_triangle, # pylint: disable=E0611
+    threshold_yen # pylint: disable=E0611
+) # pylint: disable=E0611
 from skimage.color import rgb2gray
 from tqdm import trange
 
@@ -52,12 +62,14 @@ class Identify:
         self._omnipose_params: dict = {}
         self._mask_store_path: str = ''
 
-    def show_frames(self, images_to_show_count: int = 5, use_gray_cmap: bool = False) -> None:
+    def show_frames(self, images_to_show_count: int = 5, images_per_row: int = 5, use_gray_cmap: bool = False, image_size: tuple = (5, 5)) -> None:
         """
         Displays the captured frames.
         Args:
-            images_to_show_count (int): The number of (equidistant) images to show.
+            images_to_show_count (int): The number of (equidistant) images to show. Default is 5.
+            images_per_row (int): The number of images to show per row. Default is 5.
             use_gray_cmap (bool): Whether to use a grayscale colormap.
+            image_size (tuple): The size of the image to display. Default is (5, 5).
         Returns:
             None
         """
@@ -66,15 +78,41 @@ class Identify:
             raise ValueError(
                 'The number of images to show cannot be greater than the total number of images.')
 
-        jump = total_images // images_to_show_count
+        if images_per_row <= 0:
+            raise ValueError(
+                'The number of images per row cannot be negative.')
 
-        for i in range(0, total_images, jump):
+        jump = total_images // images_to_show_count
+        selected_images_indices = range(0, total_images, jump)[
+            :images_to_show_count]
+
+        # Determine the number of rows based on the user input
+        n_cols = images_per_row
+        n_rows = int(np.ceil(images_to_show_count / n_cols))
+
+        # Calculate dynamic figure size
+        fig_width = n_cols * image_size[0]
+        fig_height = n_rows * image_size[1]
+
+        fig, axes = plt.subplots(
+            n_rows, n_cols, figsize=(fig_width, fig_height))
+        axes = axes.flatten()  # Flatten in case the axes array is multidimensional
+
+        for idx, img_idx in enumerate(selected_images_indices):
+            ax = axes[idx]
             if use_gray_cmap:
-                plt.imshow(self._working_frames[i], cmap='gray')
+                ax.imshow(self._working_frames[img_idx], cmap='gray')
             else:
-                plt.imshow(self._working_frames[i])
-            plt.suptitle(f'{i + 1}th Image')
-            plt.show()
+                ax.imshow(self._working_frames[img_idx])
+            ax.set_title(f'Image {img_idx + 1}')
+            ax.axis('off')  # Hide axes for better visualization
+
+        # Hide any remaining subplots if there are fewer images than subplot slots
+        for i in range(images_to_show_count, len(axes)):
+            axes[i].axis('off')
+
+        plt.tight_layout()
+        plt.show()
 
     # Nominal Methods
     def apply_grayscale_thresholding(self, threshold: float = 0.5, is_update_frames: bool = True) -> List:
@@ -87,9 +125,9 @@ class Identify:
             List: The updated frames after applying grayscale thresholding.
         """
         updated_frames: List = []
-        if threshold < 0 or threshold > 255:
+        if threshold < 0 or threshold > 1:
             raise ValueError(
-                'The threshold value should be between 0 and 255.')
+                'The threshold value should be between 0 and 1.')
 
         for frame_index in trange(len(self._captured_frames), desc='Applying grayscale thresholding'):
             gray_scale = rgb2gray(self._captured_frames[frame_index])
@@ -101,6 +139,141 @@ class Identify:
             self._working_frames = updated_frames
 
         print('Threshold applied successfully.')
+        return updated_frames
+
+    def try_all_algorithm_based_thresholding(self, frame_index: int = 0) -> None:
+        """
+        Applies thresholding algorithms from the scikit-image library to the captured frames.
+        Read more about it here: https://scikit-image.org/docs/stable/api/skimage.filters.html#skimage.filters.try_all_threshold
+        NOTE: The function might show dark objects over a light background. But for actual implementation, opposite is required.
+        Args:
+            frame_index (int): The index of the frame to apply the thresholding to. Default is 0.
+        Returns:
+            None
+        """
+        gray_image = rgb2gray(self._captured_frames[frame_index])
+        fig, ax = try_all_threshold(gray_image, figsize=(10, 8), verbose=False)
+        print("Following thresholding algorithms are applied: 'isodata', 'li', 'mean', 'minimum', 'otsu', 'triangle', 'yen'")
+        plt.show()
+
+    def apply_algorithm_based_thresholding(self, algorithm: str = 'otsu', is_color_inverse: bool = False, is_update_frames: bool = True, **kwargs) -> List:
+        """
+        Applies algorithm-based thresholding to the captured frames.
+        NOTE: If the dark objects over a light background are getting displayed, Put 'is_color_inverse' to True to correct it before moving to the next step.
+        Args:
+            algorithm (str): The algorithm to use for thresholding. 
+                'otsu', 'isodata', 'li', 'mean', 'minimum', 'otsu', 'triangle', 'yen' are the available options.
+                Default is 'otsu'.
+            is_update_frames (bool): Whether to update the captured frames.
+            is_color_inverse (bool): Whether to invert the colors. Default is False.
+            **kwargs: Additional keyword arguments for the thresholding algorithms. 
+                Check the skimage documentation for more information on other passable args
+                Link: https://scikit-image.org/docs/stable/api/skimage.filters.html
+        Returns:
+            List: The updated frames after applying algorithm-based thresholding.
+        """
+
+        # Mapping of available algorithms to their corresponding functions
+        algorithm_function_map = {
+            'otsu': threshold_otsu,
+            'isodata': threshold_isodata,
+            'li': threshold_li,
+            'mean': threshold_mean,
+            'minimum': threshold_minimum,
+            'triangle': threshold_triangle,
+            'yen': threshold_yen
+        }
+
+        if algorithm not in algorithm_function_map:
+            raise ValueError(
+                f"Algorithm '{algorithm}' is not recognized. Available algorithms: {list(algorithm_function_map.keys())}")
+
+        # Retrieve the threshold function based on the selected algorithm
+        threshold_function = algorithm_function_map[algorithm]
+        updated_frames: List = []
+
+        for frame_index in trange(len(self._captured_frames), desc='Applying algorithm-based thresholding'):
+            gray_scale = rgb2gray(self._captured_frames[frame_index])
+            
+            # Invert the colors if required
+            gray_scale = 1 - gray_scale if is_color_inverse else gray_scale
+
+            threshold_value = threshold_function(gray_scale)
+            binary_image = gray_scale > threshold_value
+            updated_frames.append(binary_image)
+
+        if is_update_frames:
+            self._working_frames = updated_frames
+
+        print(f'Selected {algorithm} Algorithm-based thresholding applied successfully.')
+        print(
+        "NOTE: If dark objects are displayed over a light background, set 'is_color_inverse' to True "
+        "and redo the thresholding to correct it before proceeding to the next step."
+        )
+
+        return updated_frames
+
+    def apply_gaussian_adaptive_thresholding(self, block_size: int = 11, c: int = 2, is_color_inverse: bool = False, is_update_frames: bool = True) -> List:
+        """
+        Applies Gaussian adaptive thresholding to the captured frames.
+        NOTE: If the dark objects over a light background are getting displayed, Put 'is_color_inverse' to True to correct it before moving to the next step.
+        Args:
+            block_size (int): The size of the block for adaptive thresholding. Default is 11.
+            c (int): The constant to subtract from the mean. Default is 2.
+            is_color_inverse (bool): Whether to invert the colors. Default is False.
+            is_update_frames (bool): Whether to update the captured frames.
+        Returns:
+            List: The updated frames after applying Gaussian adaptive thresholding.
+        """
+        updated_frames: List = []
+        for frame_index in trange(len(self._captured_frames), desc='Applying Gaussian adaptive thresholding'):
+            gray_scale = rgb2gray(self._captured_frames[frame_index])
+            gray_scale = (gray_scale * 255).astype('uint8')
+
+            # Apply Gaussian adaptive thresholding
+            thresholded_image = cv2.adaptiveThreshold(
+                gray_scale, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, block_size, c
+            )
+
+            # Convert thresholded image to binary format (True/False)
+            binary_image = thresholded_image > 0  # This creates a boolean array (True/False)
+
+            # Convert to 0/1 representation
+            binary_image = binary_image.astype(int)
+
+            # Invert the binary image if is_color_inverse is True
+            if is_color_inverse:
+                binary_image = 1 - binary_image  # Inverts the binary image
+
+            updated_frames.append(binary_image)
+
+        if is_update_frames:
+            self._working_frames = updated_frames
+
+        print('Gaussian adaptive thresholding applied successfully.')
+        print(
+        "NOTE: If dark objects are displayed over a light background, set 'is_color_inverse' to True "
+        "and redo the thresholding to correct it before proceeding to the next step."
+        )
+        return updated_frames
+
+    def apply_color_inverse(self, is_update_frames: bool = True) -> List:
+        """
+        Applies color inverse to the captured frames.
+        Args:
+            is_update_frames (bool): Whether to update the captured frames.
+        Returns:
+            List: The updated frames after applying color inverse.
+        """
+        updated_frames: List = []
+        for frame_index in trange(len(self._captured_frames), desc='Applying color inverse'):
+            inverted_frame = cv2.bitwise_not(self._captured_frames[frame_index])
+            updated_frames.append(inverted_frame)
+
+        if is_update_frames:
+            self._working_frames = updated_frames
+
+        print('Color inverse applied successfully.')
         return updated_frames
 
     def generate_region_props_to_dataframe(self, view_props: List[AvailableProps]) -> pd.DataFrame:
@@ -229,12 +402,23 @@ class Identify:
         if show_time:
             plt.scatter(self._region_props_dataframe['centroid_y'], self._region_props_dataframe['centroid_x'],
                         s=5, c=self._region_props_dataframe['frame'], cmap="jet_r")
-            plt.colorbar()
+
+            # Add color bar with label
+            color_bar = plt.colorbar()
+            color_bar.set_label('Frame Number')
         else:
             plt.scatter(self._region_props_dataframe['centroid_y'],
                         self._region_props_dataframe['centroid_x'], s=5, color='black')
+        # Add title
+        plt.title('Scatter Plot of Centroids Over Frames')
+
+        # Add axis labels
+        plt.xlabel('Pixel X')
+        plt.ylabel('Pixel Y')
+
         plt.gca().invert_yaxis()
         plt.gca().set_aspect('equal', adjustable='box')
+        plt.grid(False)
         plt.show()
 
     def save_identified_objects_to_csv(self, output_file_name='identified_objects') -> None:
@@ -299,7 +483,8 @@ class Identify:
             return
         is_binary_frames = self.__are_frames_binary(self._working_frames)
         if is_binary_frames:
-            self._working_frames = self.__convert_to_uint8(self._working_frames)
+            self._working_frames = self.__convert_to_uint8(
+                self._working_frames)
 
         normalized_frames = []
         for frame_index in trange(len(self._working_frames), desc='Preparing frames for the omnipose model'):
@@ -328,7 +513,8 @@ class Identify:
         Returns:
             List: The converted frames in uint8 format.
         """
-        uint8_frames = [(frame.astype(np.uint8) * 255) for frame in binary_frames]
+        uint8_frames = [(frame.astype(np.uint8) * 255)
+                        for frame in binary_frames]
         return uint8_frames
 
     def __activate_gpu(self) -> bool:

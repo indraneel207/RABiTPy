@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from distfit import distfit
+from tqdm import trange
 
 from .track import Tracker  # type: ignore
 
@@ -31,10 +32,10 @@ class Stats:
         self._sorted_dataframe = tracker_object._linked_particles_dataframes
         self._directory: str = tracker_object.get_directory()
         self._capture_speed_in_fps = tracker_object._parent._parent.get_frame_rate()
-        self._pixel_to_um: float = tracker_object._parent._parent.get_pixel_to_um()
+        self.pixel_scale_factor: float = tracker_object._parent._parent.get_pixel_scale_factor()
         self._mean_array: List[float] = []
 
-    def calculate_and_plot_mean(self, plots_per_row: int = 4, distribution_type: any = DEFAULT_DISTRIBUTION) -> np.ndarray:
+    def calculate_speed_and_plot_mean(self, plots_per_row: int = 4, distribution_type: any = DEFAULT_DISTRIBUTION) -> np.ndarray:
         """
         Calculate the mean array of speeds for each particle and plot the distributions.
 
@@ -57,7 +58,8 @@ class Stats:
         fig, axes = plt.subplots(rows * 2, plots_per_row, figsize=(20, rows * 10))
         axes = axes.flatten()  # Flatten the 2D array of axes for easy iteration
 
-        for idx, each_particle in enumerate(unique_particles):
+        for idx in trange(len(unique_particles), desc='Calculating Speed'):
+            each_particle = unique_particles[idx]
             current_particle = self.__get_particle_data(each_particle)
             speed = self.__calculate_speed(current_particle)
             mean_speed = self.__fit_and_plot_speed_distribution(
@@ -94,17 +96,26 @@ class Stats:
         Returns:
             np.ndarray: Array of speeds for the particle.
         """
-        x = particle_data['centroid_x'].to_numpy()
-        y = particle_data['centroid_y'].to_numpy()
-        x_diff = np.diff(x)
-        y_diff = np.diff(y)
-        distance = np.sqrt(x_diff**2 + y_diff**2)
-        distance_in_um = distance * self._pixel_to_um
-        time = particle_data['frame']
-        time_diff = np.diff(time)
-        time_in_seconds = time_diff / self._capture_speed_in_fps
-        speed = distance_in_um / time_in_seconds
-        particle_data['speed'] = np.append(speed, 0)
+        # If there's only one row, speed can't be calculated, so return 0.0 for that single point.
+        if len(particle_data) < 2:
+            speed = np.array([0.0])
+        else:
+            x = particle_data['centroid_x'].to_numpy()
+            y = particle_data['centroid_y'].to_numpy()
+            x_diff = np.diff(x)
+            y_diff = np.diff(y)
+            distance = np.sqrt(x_diff**2 + y_diff**2)
+            distance_in_um = distance * self.pixel_scale_factor
+            time = particle_data['frame']
+            time_diff = np.diff(time)
+            time_in_seconds = time_diff / self._capture_speed_in_fps
+            speed = distance_in_um / time_in_seconds
+
+            # Append 0.0 for the last speed entry to match the length of the particle_data
+            speed = np.append(speed, 0.0)
+
+        # Assign the speed array back to the DataFrame
+        particle_data['speed'] = speed
         return speed
 
     def __fit_and_plot_speed_distribution(self, axes: np.ndarray, idx: int, speed: np.ndarray, particle: int, distribution_type: any = DEFAULT_DISTRIBUTION) -> float:
@@ -120,8 +131,8 @@ class Stats:
         Returns:
             float: Mean speed of the particle.
         """
-        speed_distribution = distfit(distr=distribution_type)
-        speed_distribution.fit_transform(speed)
+        speed_distribution = distfit(distr=distribution_type, verbose=0)
+        speed_distribution.fit_transform(speed, verbose=False)
         mean_speed = speed_distribution.model['loc']
 
         # Plot the histogram
@@ -154,27 +165,20 @@ class Stats:
         for j in range(start_idx, len(axes)):
             fig.delaxes(axes[j])
 
-    def plot_overall_mean_speed_distribution(self, distribution_type: any = DEFAULT_DISTRIBUTION) -> None:
+    def plot_overall_mean_speed_distribution(self, bins: int = 10) -> None:
         """
         Plot the overall mean speed distribution.
 
         Args:
-            mean_array (np.ndarray): Array of mean speeds for each particle.
-
+            bins (int): Number of bins for the histogram.
         Returns:
             None
         """
         # Normalize the overall distribution of mean_array
         fig, ax = plt.subplots(figsize=(10, 6))
         mean_array = np.array(self._mean_array)
-        mean_distribution = distfit(distr=distribution_type)
-        mean_distribution.fit_transform(mean_array)
-        
-        mean_distribution.plot(ax=ax)
-        ax.hist(mean_array, bins='auto', density=True,
-                 alpha=0.7, label='Mean Speeds')
+        ax.hist(mean_array, bins=bins, density=False, alpha=0.7, label='Mean Speeds')
         ax.set_title('Overall Mean Speed Distribution')
-        ax.legend()
         plt.show()
 
     def save_mean_speeds(self, filename: str) -> None:
