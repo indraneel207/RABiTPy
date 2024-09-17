@@ -6,6 +6,7 @@ import os
 import cv2
 from tqdm import tqdm, trange
 
+
 class Capture:
     """
     The Capture class provides methods to retrieve file paths, store images from a video, 
@@ -72,10 +73,10 @@ class Capture:
             print(e)
 
     def process_video_into_frames(self, pixel_scale_factor: float = DEFAULT_PIXEL_SCALE_FACTOR,
-                                       scale_units: str = DEFAULT_SCALE_UNITS,
-                                       capture_speed_in_fps = None,
-                                       is_store_video_frames = False,
-                                       store_images_path = DEFAULT_STORE_IMAGE_FILE_DIRECTORY) -> list:
+                                  scale_units: str = DEFAULT_SCALE_UNITS,
+                                  capture_speed_in_fps=None,
+                                  is_store_video_frames=False,
+                                  store_images_path=DEFAULT_STORE_IMAGE_FILE_DIRECTORY) -> list:
         """
         Processes the already loaded video into frames based on the given pixel to micrometer conversion factor and capture speed.
         The pixel_scale_factor is mandatory to process the video into frames else will give an error.
@@ -167,6 +168,7 @@ class Capture:
         self._video_capture_speed = capture_speed_in_fps
         self._actual_fps = capture_speed_in_fps
         self._pixel_scale_factor = pixel_scale_factor
+        self._scale_units = scale_units
 
         complete_folder_path = os.path.join(self._directory, folder_path)
         if not os.path.isdir(complete_folder_path):
@@ -184,7 +186,7 @@ class Capture:
         print(f'{len(frames)} frames loaded from folder: {complete_folder_path}')
         return frames
 
-    def set_properties(self, pixel_scale_factor: float = DEFAULT_PIXEL_SCALE_FACTOR, scale_units: str = DEFAULT_SCALE_UNITS, capture_speed_in_fps = None):
+    def set_properties(self, pixel_scale_factor: float = DEFAULT_PIXEL_SCALE_FACTOR, scale_units: str = DEFAULT_SCALE_UNITS, capture_speed_in_fps=None):
         """
         Sets the properties of the Capture object.
 
@@ -225,10 +227,10 @@ class Capture:
         print(f'{len(captured_frames)} frame(s) captured successfully '
               f'for the video FPS: {self._video_capture_speed} to the '
               f'folder: {self._video_frames_store_path}'
-            )
+              )
         return captured_frames
 
-    def __validate_the_file_name_and_type(self, file_name = ''):
+    def __validate_the_file_name_and_type(self, file_name=''):
         """
         Validates the file name and type.
 
@@ -427,7 +429,7 @@ class Capture:
         total_frames = int(video_duration_in_seconds * self._video_capture_speed)
         return total_frames
 
-    def __capture_and_store_frames(self, video, is_store_video_frames = False):
+    def __capture_and_store_frames(self, video, is_store_video_frames=False):
         """
         Captures and stores frames from the video.
 
@@ -456,7 +458,7 @@ class Capture:
 
                 if is_store_video_frames:
                     frame_counter += 1
-                    cv2.imwrite(f'{self._video_frames_store_path}/{image_path_prefix}_{frame_counter}.tiff',frame)
+                    cv2.imwrite(f'{self._video_frames_store_path}/{image_path_prefix}_{frame_counter}.tiff', frame)
 
                 captured_frames.append(frame)
                 progress_bar.update(1)
@@ -464,7 +466,7 @@ class Capture:
 
         return captured_frames
 
-    def __extract_number_from_file_name(self, filename = ''):
+    def __extract_number_from_file_name(self, filename=''):
         """
         Extracts the number from the filename.
         Args:
@@ -487,7 +489,7 @@ class Capture:
             files = []
         return [f for f in files if os.path.isfile(os.path.join(file_path, f))]
 
-    def __list_files(self, file_path = ''):
+    def __list_files(self, file_path=''):
         """
         Lists the files in the given folder.
         Args:
