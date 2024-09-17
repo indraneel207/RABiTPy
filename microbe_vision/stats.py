@@ -179,6 +179,8 @@ class Stats:
         mean_array = np.array(self._mean_array)
         ax.hist(mean_array, bins=bins, density=False, alpha=0.7, label='Mean Speeds')
         ax.set_title('Overall Mean Speed Distribution')
+        ax.set_xlabel('Mean Speed (um/s)')
+        ax.set_ylabel('Frequency')
         plt.show()
 
     def save_mean_speeds(self, filename: str) -> None:
