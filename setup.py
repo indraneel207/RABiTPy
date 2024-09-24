@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='rabtpy',
-    version='0.1.3-alpha',
+    version='0.1.4-alpha',
     packages=find_packages(),
     install_requires=[
         # Add your package dependencies here
