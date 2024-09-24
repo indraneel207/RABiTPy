@@ -141,7 +141,7 @@ Retrieves the frame rate at which the video is processed.
 
 | Type  | Explanation  |
 |-------|--------------|
-| `int` | The frame rate in frames per second. |
+| `Dict: { 'user_provided_fps': int, 'default_fps': int }` | The frame rate in frames per second. |
 
 ---
 

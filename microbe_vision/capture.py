@@ -32,7 +32,7 @@ class Capture:
         self._supported_video_file_types: list[str] = Capture.SUPPORTED_INPUT_VIDEO_FILE_TYPES
         self._video_file_path: str = ''
         self._video_file_name: str = ''
-        self._video_capture_speed: int = 0
+        self._default_fps: int = 0
         self._actual_fps: int = 0
         self._pixel_scale_factor: float = 0.0
         self._scale_units: str = ''
@@ -62,7 +62,7 @@ class Capture:
             video = cv2.VideoCapture(self._video_file_path)
             try:
                 default_video_fps = self.__print_video_info_and_get_fps(video)
-                self._video_capture_speed = default_video_fps
+                self._default_fps = default_video_fps
             finally:
                 video.release()
 
@@ -84,7 +84,7 @@ class Capture:
         Args:
           pixel_scale_factor (float, optional): The pixel scale factor. Defaults to DEFAULT_PIXEL_SCALE_FACTOR.
           scale_units (str, optional): The scale units. Defaults to DEFAULT_SCALE_UNITS.
-          capture_speed_in_fps (int, optional): Capture speed in frames/sec. Defaults to given video FPS or 15.
+          capture_speed_in_fps (int, optional): Capture speed in frames/sec. Defaults to given video FPS or 15. Note: If the user provides the capture speed in FPS, The time of the video might be different from the actual video time, although the total frames will be constant.
           is_store_video_frames (bool, optional): Flag to store video frames. Defaults to False.
           store_images_path (str, optional): Path to store images. Defaults to DEFAULT_STORE_IMAGE_FILE_DIRECTORY.
 
@@ -101,9 +101,9 @@ class Capture:
             # If the user provides the capture speed in FPS, then use that value else use the video FPS
             if capture_speed_in_fps:
                 self._actual_fps = capture_speed_in_fps
+                print(f'User provided a FPS: {self._actual_fps}, So processing the video with the given FPS')
             else:
-                capture_speed_in_fps = self._video_capture_speed
-                self._actual_fps = self._video_capture_speed
+                self._actual_fps = self._default_fps
 
             captured_frames = []
             self._pixel_scale_factor = pixel_scale_factor
@@ -136,13 +136,13 @@ class Capture:
         """
         return self._directory
 
-    def get_frame_rate(self):
+    def get_frame_rate(self) -> dict:
         """
         Retrieves the frame rate.
         Returns:
-          str: The frame rate.
+          dict: The frame rates (user provided and default).
         """
-        return self._actual_fps
+        return { 'user_provided_fps': self._actual_fps, 'default_fps': self._default_fps }
 
     def get_pixel_scale_factor(self):
         """
@@ -165,7 +165,7 @@ class Capture:
         Raises:
           FileNotFoundError: If the specified folder is not found.
         """
-        self._video_capture_speed = capture_speed_in_fps
+        self._default_fps = capture_speed_in_fps
         self._actual_fps = capture_speed_in_fps
         self._pixel_scale_factor = pixel_scale_factor
         self._scale_units = scale_units
@@ -225,7 +225,7 @@ class Capture:
             video.release()
 
         print(f'{len(captured_frames)} frame(s) captured successfully '
-              f'for the video FPS: {self._video_capture_speed} to the '
+              f'for the video FPS: {self._actual_fps} to the '
               f'folder: {self._video_frames_store_path}'
               )
         return captured_frames
@@ -348,7 +348,7 @@ class Capture:
         """
         milliseconds_in_a_second = 1000
         round_off_decimals = 2
-        return round(milliseconds_in_a_second / self._video_capture_speed, round_off_decimals)
+        return round(milliseconds_in_a_second / self._actual_fps, round_off_decimals)
 
     def __handle_working_directory_preprocess(self, working_directory):
         """
@@ -403,6 +403,7 @@ class Capture:
         Args:
           video: The video object.
         """
+        round_off_decimals = 2
         video_fps = video.get(cv2.CAP_PROP_FPS)
         print('---------- Video Stats ----------')
         print(f'Video Frame Width: {int(video.get(cv2.CAP_PROP_FRAME_WIDTH))}')
@@ -410,24 +411,21 @@ class Capture:
             f'Video Frame Height: {int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))}')
         print(f'Frame Rate: {video_fps} FPS')
         print(f'Total Frames: {video.get(cv2.CAP_PROP_FRAME_COUNT)} frames')
-        print(f'Video Duration (s): {video.get(cv2.CAP_PROP_FRAME_COUNT) / video.get(cv2.CAP_PROP_FPS)}')
+        print(f'Video Duration (s): {round(video.get(cv2.CAP_PROP_FRAME_COUNT) / video.get(cv2.CAP_PROP_FPS), round_off_decimals)}')
         print('---------------------------------')
         return video_fps
 
-    def __get_custom_total_frames(self, video):
+    def __get_total_frames(self, video):
         """
         Retrieves the total frames of the video.
 
         Args:
           video: The video object.
-          custom_fps: The custom frames per second.
 
         Returns:
           int: The total frames of the video.
         """
-        video_duration_in_seconds = video.get(cv2.CAP_PROP_FRAME_COUNT) / video.get(cv2.CAP_PROP_FPS)
-        total_frames = int(video_duration_in_seconds * self._video_capture_speed)
-        return total_frames
+        return int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 
     def __capture_and_store_frames(self, video, is_store_video_frames=False):
         """
@@ -446,7 +444,7 @@ class Capture:
         captured_frames = []
         capture_speed_in_ms = self.__convert_fps_to_ms()
 
-        total_frames = self.__get_custom_total_frames(video)
+        total_frames = self.__get_total_frames(video)
         with tqdm(total=total_frames, desc='Frame capture progress') as progress_bar:
 
             while True:
