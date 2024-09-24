@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `Tracker` class in the Microbe Vision package is responsible for tracking particles in 2D using the Trackpy library. It provides functionality for linking particles across frames, filtering trajectories, saving linked data, and plotting particle trajectories.
+The `Tracker` class in the RabtPy package is responsible for tracking particles in 2D using the Trackpy library. It provides functionality for linking particles across frames, filtering trajectories, saving linked data, and plotting particle trajectories.
 
 ## Workflow
 

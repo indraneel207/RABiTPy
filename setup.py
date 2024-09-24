@@ -1,11 +1,11 @@
 """
-A setup file for the 2D Microbe Vision Tracker package to 
+A setup file for the 2D RabtPy Tracker package to 
 track the movement of a subject in a video file.
 """
 from setuptools import setup, find_packages
 
 setup(
-    name='microbe_vision',
+    name='rabtpy',
     version='0.1.3-alpha',
     packages=find_packages(),
     install_requires=[
@@ -30,7 +30,7 @@ setup(
     ],
     author='Indraneel Vairagare, Abhishek Shrivastava, Samyabrata Sen',
     author_email='indraneel207@gmail.com, ashrivastava@asu.edu, ssen31@asu.edu',
-    description='A 2D Microbe Vision Tracker package to track the movement of a subject in a video file.',
+    description='RabtPy: A package to track the movement of a subject in a video file.',
     long_description=open('README.md', encoding='utf-8').read(),
     long_description_content_type='text/markdown',
     include_package_data=True,

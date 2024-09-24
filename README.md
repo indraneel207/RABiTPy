@@ -1,6 +1,6 @@
-# Microbe Vision
+# RabtPy
 
-Microbe Vision is a comprehensive package designed to track and analyze the movement of microorganisms in video files or image sequences. This package provides tools for loading, identifying, tracking, and analyzing the movement of various organisms.
+RabtPy is a comprehensive package designed to track and analyze the movement of micro-organisms in video files or image sequences. This package provides tools for loading, identifying, tracking, and analyzing the movement of various organisms.
 
 ## Features
 
@@ -28,7 +28,7 @@ Microbe Vision is a comprehensive package designed to track and analyze the move
 
 ## Usage
 
-Microbe Vision consists of four main classes:
+RabtPy consists of four main classes:
 
 1. **Capture**: This class is responsible for loading video files or image sequences and converting them into frames that can be processed in subsequent steps.
 

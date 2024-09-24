@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `Identify` class in the Microbe Vision package is responsible for performing object identification on frames using methods such as grayscale thresholding and advanced models like Omnipose.
+The `Identify` class in the RabtPy package is responsible for performing object identification on frames using methods such as grayscale thresholding and advanced models like Omnipose.
 
 ## Workflow
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `Stats` class in the Microbe Vision package is responsible for analyzing particle motion and calculating speed distributions. It provides functionality to calculate mean speeds, fit distributions, and save the analyzed data.
+The `Stats` class in the RabtPy package is responsible for analyzing particle motion and calculating speed distributions. It provides functionality to calculate mean speeds, fit distributions, and save the analyzed data.
 
 ## Workflow
 
