@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='microbe_vision',
-    version='0.1.2-alpha',
+    version='0.1.3-alpha',
     packages=find_packages(),
     install_requires=[
         # Add your package dependencies here
@@ -31,7 +31,7 @@ setup(
     author='Indraneel Vairagare, Abhishek Shrivastava, Samyabrata Sen',
     author_email='indraneel207@gmail.com, ashrivastava@asu.edu, ssen31@asu.edu',
     description='A 2D Microbe Vision Tracker package to track the movement of a subject in a video file.',
-    long_description=open('README.md').read(),
+    long_description=open('README.md', encoding='utf-8').read(),
     long_description_content_type='text/markdown',
     include_package_data=True,
     classifiers=[
@@ -39,5 +39,5 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    python_requires='>=3.6'
+    python_requires='==3.10.12',
 )
