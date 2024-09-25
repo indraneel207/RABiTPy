@@ -34,7 +34,7 @@ RabtPy consists of four main classes:
 
 2. **Identify**: This class is used to identify different nodes or organisms in each frame. It provides two methods for identification:
    - **Thresholding**: A simple technique that uses pixel intensity thresholds to segment organisms.
-   - **Omnipose - Masking**: A more advanced method leveraging the Omnipose algorithm for accurate segmentation of organisms.
+   - **AI-based Masking**: A more advanced method leveraging the AI-based(Omnipose) algorithm for accurate segmentation of organisms.
 
 3. **Tracker**: This class tracks each identified node across frames and filters them based on criteria such as the minimum number of frames they appear in or minimal displacement across frames. This step ensures that only meaningful tracks are retained for analysis.
 
@@ -51,9 +51,9 @@ For detailed usage and examples, refer to the documentation for each class:
 
 ### Example Workflow
 
-A Jupyter notebook is attached to the code for the basic implementation.
+A Jupyter notebook with the basic implementationis can be found [here](walkthrough.ipynb).
 
-## Notes:
+## Notes
 
 1. **Capture**: The `Capture` class loads video files or images and converts them into a sequence of frames. These frames are then used as input for the next class in the workflow.
 
@@ -67,9 +67,9 @@ Each class in the workflow passes its output to the next class, ensuring a seaml
 
 ## Authors
 
+- Indraneel Vairagare
 - Abhishek Shrivastava
 - Samyabrata Sen
-- Indraneel Vairagare
 
 ## License
 
