@@ -31,7 +31,7 @@ class Stats:
         self._parent = tracker_object
         self._sorted_dataframe = tracker_object._linked_particles_dataframes
         self._directory: str = tracker_object.get_directory()
-        self._capture_speed_in_fps = tracker_object._parent._parent.get_frame_rate()
+        self._capture_speed_in_fps = tracker_object._parent._parent._actual_fps
         self.pixel_scale_factor: float = tracker_object._parent._parent.get_pixel_scale_factor()
         self._mean_array: List[float] = []
 
@@ -140,7 +140,7 @@ class Stats:
         ax_hist.hist(speed, bins=30, alpha=0.7, label='Speed')
         ax_hist.set_title(f'Particle: {particle} - Speed Histogram')
         ax_hist.legend()
-        
+
         # Plot the distribution
         ax_dist = axes[idx * 2 + 1]
         speed_distribution.plot(ax=ax_dist)
@@ -175,7 +175,7 @@ class Stats:
             None
         """
         # Normalize the overall distribution of mean_array
-        fig, ax = plt.subplots(figsize=(10, 6))
+        _, ax = plt.subplots(figsize=(10, 6))
         mean_array = np.array(self._mean_array)
         ax.hist(mean_array, bins=bins, density=False, alpha=0.7, label='Mean Speeds')
         ax.set_title('Overall Mean Speed Distribution')

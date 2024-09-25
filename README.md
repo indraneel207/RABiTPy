@@ -16,8 +16,8 @@ RabtPy is a comprehensive package designed to track and analyze the movement of 
 1. First, install the package:
 
     ```sh
-    pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple microbe-vision
-    <!-- pip install microbe_vision -->
+    pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple rabtpy
+    <!-- pip install rabtpy -->
     ```
 
 2. Use this specific command to install the Omnipose

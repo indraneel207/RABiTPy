@@ -12,6 +12,7 @@ setup(
         # Add your package dependencies here
         'aicsimageio==4.14.0',
         'distfit==1.7.3',
+        'ipywidgets==8.1.5',
         'matplotlib==3.7.5',
         'matplotlib-inline==0.1.6',
         'numpy==1.24.4',
