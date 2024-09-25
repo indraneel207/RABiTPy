@@ -1,6 +1,6 @@
-# RabtPy
+# RABiTPy - Rapid Artificially Intelligent Bacterial Tracker
 
-RabtPy is a comprehensive package designed to track and analyze the movement of micro-organisms in video files or image sequences. This package provides tools for loading, identifying, tracking, and analyzing the movement of various organisms.
+RABiTPy is a comprehensive package designed to track and analyze the movement of micro-organisms in video files or image sequences. This package provides tools for loading, identifying, tracking, and analyzing the movement of various organisms.
 
 ## Features
 
@@ -16,8 +16,8 @@ RabtPy is a comprehensive package designed to track and analyze the movement of 
 1. First, install the package:
 
     ```sh
-    pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple rabtpy
-    <!-- pip install rabtpy -->
+    pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple RABiTPy
+    <!-- pip install RABiTPy -->
     ```
 
 2. Use this specific command to install the Omnipose
@@ -28,7 +28,7 @@ RabtPy is a comprehensive package designed to track and analyze the movement of 
 
 ## Usage
 
-RabtPy consists of four main classes:
+RABiTPy consists of four main classes:
 
 1. **Capture**: This class is responsible for loading video files or image sequences and converting them into frames that can be processed in subsequent steps.
 

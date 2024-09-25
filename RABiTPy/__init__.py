@@ -1,5 +1,5 @@
 """
-This is the initialization module for the RabtPy package.
+This is the initialization module for the RABiTPy package.
 
 The package provides functionality for capturing and tracking 2D biological data.
 

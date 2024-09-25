@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `Capture` class in the RabtPy package is responsible for loading video files or image sequences and converting them into frames for further processing.
+The `Capture` class in the RABiTPy package is responsible for loading video files or image sequences and converting them into frames for further processing.
 
 ## Workflow
 
