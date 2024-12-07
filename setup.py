@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='RABiTPy',
-    version='0.1.4-alpha',
+    version='0.1.5-alpha',
     packages=find_packages(),
     install_requires=[
         # Add your package dependencies here
