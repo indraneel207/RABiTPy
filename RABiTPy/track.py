@@ -4,12 +4,14 @@ Module for tracking particles in 2D using trackpy.
 
 import os
 
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-
 import trackpy as tp
+from matplotlib import cm
+from tqdm import tqdm
 
 from .identify import Identify
 
@@ -114,7 +116,8 @@ class Tracker:
             pd.DataFrame: DataFrame containing the MSD values.
         """
         if self._linked_particles_dataframes.empty:
-            raise ValueError("No linked dataframes available. Please link particles first.")
+            raise ValueError(
+                "No linked dataframes available. Please link particles first.")
 
         # Calculate the MSD
         msd_dataframe = tp.imsd(
@@ -128,24 +131,28 @@ class Tracker:
         _, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6), dpi=300)
 
         # Plot MSD
-        ax1.plot(msd_dataframe.index, msd_dataframe, 'k-', alpha=0.1)  # black lines, semitransparent
+        ax1.plot(msd_dataframe.index, msd_dataframe, 'k-',
+                 alpha=0.1)  # black lines, semitransparent
         ax1.set_xscale('log')
         ax1.set_yscale('log')
-        ax1.set(ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]', xlabel='lag time $t$')
+        ax1.set(
+            ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]', xlabel='lag time $t$')
         ax1.set_title('Mean Squared Displacement (MSD)')
 
         # Plot EMSD
         ax2.plot(emsd_dataframe.index, emsd_dataframe, 'bo')
         ax2.set_xscale('log')
         ax2.set_yscale('log')
-        ax2.set(ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]', xlabel='lag time $t$')
+        ax2.set(
+            ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]', xlabel='lag time $t$')
         ax2.set_title('Ensemble Mean Squared Displacement (EMSD)')
 
         plt.show()
 
         # Save the MSD values to a CSV file
         if is_save:
-            output_path = os.path.join(self._directory, f'{output_file_name}.csv')
+            output_path = os.path.join(
+                self._directory, f'{output_file_name}.csv')
             msd_dataframe.to_csv(output_path, index=False)
             print(f'MSD values saved to {output_path}')
 
@@ -203,7 +210,8 @@ class Tracker:
         plt.gca().invert_yaxis()
         plt.gca().set_title('Scatter plot of the trajectories')
 
-        n_cols = len(sorted_dataframe) // 20000 if len(sorted_dataframe) > 20000 else 1
+        n_cols = len(
+            sorted_dataframe) // 20000 if len(sorted_dataframe) > 20000 else 1
 
         plt.legend(title='Particle ID', bbox_to_anchor=(
             1.05, 1), loc='upper left', borderaxespad=0., ncols=n_cols)
@@ -261,7 +269,8 @@ class Tracker:
             plt.axhline(0, color='black', linewidth=1)
             plt.axvline(0, color='black', linewidth=1)
 
-        n_cols = len(particle_data) // 20000 if len(particle_data) > 20000 else 1
+        n_cols = len(
+            particle_data) // 20000 if len(particle_data) > 20000 else 1
 
         # Move the legend box outside the plot and give it a title
         plt.legend(title='Particle ID', bbox_to_anchor=(
@@ -307,6 +316,93 @@ class Tracker:
         """
         self._linked_particles_dataframes = linked_particles_dataframes
 
+    def overlay_tracks_on_video(
+        self,
+        output_video_filename: str,
+        colormap_name: str = "viridis",
+        frame_index_offset: int = -1
+    ) -> None:
+        """
+        Overlays tracked particle trajectories onto the loaded video frames and saves the output video.
+
+        Args:
+            output_video_filename (str): Name of the output video file to save with overlaid tracks.
+            colormap_name (str, optional): Name of the matplotlib colormap to assign unique colors to particles.
+                Default is "viridis".
+            frame_index_offset (int, optional): Offset to adjust frame indexing differences between
+                the tracking data and video frames. Default is -1.
+
+        Raises:
+            ValueError: If tracking data is not available.
+            ValueError: If no captured frames are available from the Capture class.
+        """
+        # Retrieve the working directory from the Capture class via the Identify object
+        working_directory = self._parent.get_directory()
+
+        # Construct the full output video path
+        output_video_path = os.path.join(
+            working_directory, output_video_filename)
+
+        # Retrieve captured frames and validate
+        frames = self._parent._parent.get_captured_frames()
+        if not frames:
+            raise ValueError(
+                "No captured frames available. Ensure the video is loaded and processed correctly.")
+
+        # Retrieve frame rate information
+        frame_rate_info = self._parent._parent.get_frame_rate()
+        fps = frame_rate_info.get('user_provided_fps') or frame_rate_info.get(
+            'default_fps') or 15  # Fallback to 15 FPS if not available
+
+        # Retrieve tracking data
+        tracking_data = self._linked_particles_dataframes
+        if tracking_data.empty:
+            raise ValueError(
+                "Tracking data is empty. Ensure particles are linked before overlaying tracks.")
+
+        # Sort tracking data by frame and particle for consistency
+        tracking_data = tracking_data.sort_values(by=["frame", "particle"])
+
+        # Generate unique colors for particles
+        particle_colors = self._generate_particle_colors(
+            tracking_data, colormap_name)
+
+        # Initialize video writer
+        video_writer = self._initialize_video_writer(
+            frames[0], fps, output_video_path)
+
+        # Dictionary to store cumulative particle tracks
+        particle_tracks = {particle: []
+                           for particle in tracking_data['particle'].unique()}
+
+        # Total number of frames
+        total_frames = len(frames)
+
+        # Initialize progress bar
+        with tqdm(total=total_frames, desc="Overlaying Tracks on Video") as progress_bar:
+            for current_frame_index, frame in enumerate(frames):
+                # Adjust frame index based on the offset
+                adjusted_frame_index = current_frame_index + 1 + frame_index_offset
+
+                # Extract particle data for the current frame
+                frame_data = tracking_data[tracking_data['frame']
+                                           == adjusted_frame_index]
+
+                # Update particle tracks
+                self._update_particle_tracks(frame_data, particle_tracks)
+
+                # Draw particle tracks on the frame
+                self._draw_particle_tracks(
+                    frame, particle_tracks, particle_colors)
+
+                # Write the processed frame to the output video
+                video_writer.write(frame)
+                progress_bar.update(1)
+
+        # Release video writer resources
+        video_writer.release()
+        print(f'Processed video with overlaid tracks saved to {output_video_path}')
+
     # Private methods
     def __shape_and_sort_dataframe(self, dataframe: pd.DataFrame, cols: list[str], sort_by: list[str]) -> pd.DataFrame:
         """
@@ -322,3 +418,79 @@ class Tracker:
         temp_dataframe.columns = cols
         temp_dataframe.index.name = None
         return temp_dataframe.sort_values(by=sort_by, ascending=True)
+
+    def _generate_particle_colors(self, tracking_data: pd.DataFrame, colormap_name: str) -> dict:
+        """
+        Generates unique colors for each particle using the specified colormap.
+
+        Args:
+            tracking_data (pd.DataFrame): DataFrame containing tracking data.
+            colormap_name (str): Name of the matplotlib colormap to use.
+
+        Returns:
+            dict: A dictionary mapping each particle ID to its assigned color in BGR format.
+        """
+
+        unique_particles = tracking_data['particle'].unique()
+        num_particles = len(unique_particles)
+        cmap = cm.get_cmap(colormap_name, num_particles)
+        particle_colors = {particle: cmap(
+            i)[:3] for i, particle in enumerate(unique_particles)}
+
+        # Convert colors from 0-1 range to 0-255 range and from RGB to BGR for OpenCV
+        particle_colors_bgr = {
+            p: (int(c[2] * 255), int(c[1] * 255),
+                int(c[0] * 255))  # Convert RGB to BGR
+            for p, c in particle_colors.items()
+        }
+
+        return particle_colors_bgr
+
+    def _initialize_video_writer(self, frame: np.ndarray, fps: float, output_video_path: str) -> cv2.VideoWriter:
+        """
+        Initializes the OpenCV VideoWriter object.
+
+        Args:
+            frame (np.ndarray): A single frame from the video to determine frame size.
+            fps (float): Frames per second for the output video.
+            output_video_path (str): Full path to save the output video.
+
+        Returns:
+            cv2.VideoWriter: Initialized VideoWriter object.
+        """
+        frame_height, frame_width = frame.shape[:2]
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Codec for the output video
+        video_writer = cv2.VideoWriter(
+            output_video_path, fourcc, fps, (frame_width, frame_height))
+        return video_writer
+
+    def _update_particle_tracks(self, frame_data: pd.DataFrame, particle_tracks: dict) -> None:
+        """
+        Updates the particle tracks dictionary with new positions from the current frame.
+
+        Args:
+            frame_data (pd.DataFrame): DataFrame containing particle data for the current frame.
+            particle_tracks (dict): Dictionary storing cumulative tracks for each particle.
+        """
+        for _, row in frame_data.iterrows():
+            particle_id = row['particle']
+            # Swap x and y coordinates for correct alignment (assuming 'centroid_y' is x and 'centroid_x' is y)
+            particle_position = (
+                int(row['centroid_y']), int(row['centroid_x']))
+            particle_tracks[particle_id].append(particle_position)
+
+    def _draw_particle_tracks(self, frame: np.ndarray, particle_tracks: dict, particle_colors: dict) -> None:
+        """
+        Draws the particle tracks on the given frame.
+
+        Args:
+            frame (np.ndarray): The video frame to draw on.
+            particle_tracks (dict): Dictionary storing cumulative tracks for each particle.
+            particle_colors (dict): Dictionary mapping each particle ID to its color.
+        """
+        for particle_id, track_points in particle_tracks.items():
+            # Default to white if not found
+            track_color = particle_colors.get(particle_id, (255, 255, 255))
+            for i in range(1, len(track_points)):
+                cv2.line(
+                    frame, track_points[i - 1], track_points[i], track_color, thickness=2)

@@ -154,6 +154,33 @@ Sorts the linked particles' DataFrame and plots a scatter plot of their trajecto
 
 ---
 
+### `overlay_tracks_on_video`
+
+**Description**:  
+Overlays tracked particle trajectories onto the loaded video frames and saves the processed video. This method utilizes the video frames already loaded and processed by the `Capture` class, ensuring consistency in file paths and directories. It assigns unique colors to each particle using a specified colormap and draws their movement trajectories across the video frames.
+
+#### Arguments
+
+| Name                  | Type | Explanation                                                                                           | Optional | Default Value |
+|-----------------------|------|-------------------------------------------------------------------------------------------------------|----------|---------------|
+| `output_video_filename` | `str` | The name of the output video file where the trajectories will be overlaid.                           | No       | N/A           |
+| `colormap_name`         | `str` | The name of the matplotlib colormap used to assign unique colors to each particle. Defaults to `"viridis"`. Matplotlib offers a variety of colormaps such as `"plasma"`, `"inferno"`, `"jet"`, etc. | Yes      | `"viridis"`   |
+| `frame_index_offset`    | `int` | Adjusts frame indexing differences between tracking data and video frames. For example, if tracking data frames start at `1` and video frames start at `0`, an offset of `-1` aligns them correctly. Defaults to `-1`. | Yes      | `-1`          |
+
+#### Returns
+
+| Type  | Explanation  |
+|-------|--------------|
+| `None` | The method does not return any value. |
+
+#### Errors
+
+- **`ValueError`**:  
+  - Raised if there are no captured frames available from the `Capture` class (i.e., if the video has not been loaded and processed correctly).
+  - Raised if the tracking data is empty (i.e., if particles have not been linked using `link_particles`).
+
+---
+
 ### `get_directory`
 
 **Description**:  
@@ -195,4 +222,12 @@ tracker.plot_trajectories_using_trackpy()
 
 # Sort and plot a scatter plot of the trajectories
 tracker.sort_and_plot_scatter_of_trajectories()
+
+# Overlay tracks on video
+output_video_filename = "Flavo_case_tracks_overlaid.avi"
+tracker.overlay_tracks_on_video(
+    output_video_filename=output_video_filename,
+    colormap_name="viridis",
+    frame_index_offset=-1  # Adjust based on your tracking data
+)
 ```
