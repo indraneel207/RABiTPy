@@ -16,7 +16,7 @@ The `Capture` class in the RABiTPy package is responsible for loading video file
 | `DEFAULT_STORE_IMAGE_FILE_DIRECTORY`| Default directory to store images from the video.                  | `'frames_from_video'`                        |
 | `SUPPORTED_INPUT_VIDEO_FILE_TYPES`  | Supported video file types (`avi`, `mp4`, `mpg`, `mpeg`).          | `['avi', 'mp4', 'mpg', 'mpeg']`              |
 | `DEFAULT_CAPTURE_SPEED_IN_FPS`      | Default capture speed in frames per second.                        | `15`                                         |
-| `DEFAULT_PIXEL_TO_MICRON`           | Conversion factor from pixel to micron.                            | `0.1`                          |
+| `DEFAULT_PIXEL_TO_MICRON`           | Conversion factor from pixel to micron.                            | `1`                          |
 
 ## Methods
 
