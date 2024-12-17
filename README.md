@@ -16,8 +16,7 @@ RABiTPy is a comprehensive package designed to track and analyze the movement of
 1. First, install the package:
 
     ```sh
-    pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple RABiTPy
-    <!-- pip install RABiTPy -->
+    pip install RABiTPy
     ```
 
 2. Use this specific command to install the Omnipose
@@ -67,9 +66,9 @@ Each class in the workflow passes its output to the next class, ensuring a seaml
 
 ## Authors
 
-- Indraneel Vairagare
-- Abhishek Shrivastava
-- Samyabrata Sen
+- Indraneel Vairagare (indraneel207@gmail.com)
+- Samyabrata Sen (ssen31@asu.edu)
+- Abhishek Shrivastava (ashrivastava@asu.edu)
 
 ## License
 
