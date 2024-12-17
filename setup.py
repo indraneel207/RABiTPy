@@ -1,12 +1,17 @@
 """
-A setup file for the 2D RABiTPy Tracker package to 
+A setup file for the 2D RABiTPy Tracker package to
 track the movement of a subject in a video file.
 """
 from setuptools import setup, find_packages
+from pathlib import Path
+
+# Read the long description from README.md
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 setup(
     name='RABiTPy',
-    version='0.1.5-alpha',
+    version='1.0.0',
     packages=find_packages(),
     install_requires=[
         # Add your package dependencies here
@@ -29,16 +34,26 @@ setup(
         'tqdm==4.66.2',
         'trackpy==0.6.2',
     ],
-    author='Indraneel Vairagare, Abhishek Shrivastava, Samyabrata Sen',
-    author_email='indraneel207@gmail.com, ashrivastava@asu.edu, ssen31@asu.edu',
+    author='Indraneel Vairagare',
+    author_email='indraneel207@gmail.com',
+    maintainer='Samyabrata Sen, Abhishek Shrivastava',
+    maintainer_email='ssen31@asu.edu, ashrivastava@asu.edu',
     description='RABiTPy: A package to track the movement of a subject in a video file.',
-    long_description=open('README.md', encoding='utf-8').read(),
+    long_description=long_description,
     long_description_content_type='text/markdown',
+    url='https://github.com/indraneel207/RABiTPy',
     include_package_data=True,
     classifiers=[
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.10',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
+    license='MIT',
     python_requires='>=3.10, <3.11',
+    keywords='tracking video analysis 2D',
+    project_urls={
+        'Bug Reports': 'https://github.com/indraneel207/RABiTPy/issues',
+        'Source': 'https://github.com/indraneel207/RABiTPy',
+    }
 )

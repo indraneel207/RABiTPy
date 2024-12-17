@@ -67,9 +67,9 @@ Each class in the workflow passes its output to the next class, ensuring a seaml
 
 ## Authors
 
-- Indraneel Vairagare
-- Abhishek Shrivastava
-- Samyabrata Sen
+- Indraneel Vairagare (indraneel207@gmail.com)
+- Samyabrata Sen (ssen31@asu.edu)
+- Abhishek Shrivastava (ashrivastava@asu.edu)
 
 ## License
 
