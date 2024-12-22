@@ -7,11 +7,11 @@ from pathlib import Path
 
 # Read the long description from README.md
 this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text(encoding="utf-8")
+long_description = (this_directory / "pypi-description.md").read_text(encoding="utf-8")
 
 setup(
     name='RABiTPy',
-    version='1.0.1',
+    version='1.0.2',
     packages=find_packages(),
     install_requires=[
         # Add your package dependencies here

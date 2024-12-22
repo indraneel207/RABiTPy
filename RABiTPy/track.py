@@ -169,7 +169,15 @@ class Tracker:
                 "No linked dataframes available. Please link particles first.")
 
         output_path = os.path.join(self._directory, f'{output_file_name}.csv')
-        self._linked_particles_dataframes.to_csv(output_path, index=False)
+
+        # Create a copy of the dataframe to avoid modifying the original
+        modified_dataframe = self._linked_particles_dataframes.copy()
+
+        # Add new columns for swapped centroid_x and centroid_y
+        modified_dataframe["new_x"] = modified_dataframe["centroid_y"]
+        modified_dataframe["new_y"] = modified_dataframe["centroid_x"]
+
+        modified_dataframe.to_csv(output_path, index=False)
         print(f'Linked dataframes saved to {output_path}')
 
     def plot_trajectories_using_trackpy(self) -> None:
