@@ -423,7 +423,7 @@ class Identify:
 
     def save_identified_objects_to_csv(self, output_file_name='identified_objects') -> None:
         """
-        Saves the identified objects to a CSV file.
+        Saves the identified objects to a CSV file. The file will contain the region properties dataframe. 
         Args:
             output_file_name (str): The name of the output file.
         Returns:
@@ -431,7 +431,15 @@ class Identify:
         """
         save_file_path = os.path.join(
             self._directory, f'{output_file_name}.csv')
-        self._region_props_dataframe.to_csv(save_file_path, index=False)
+
+        # Create a copy of the dataframe to avoid modifying the original
+        modified_dataframe = self._region_props_dataframe.copy()
+
+        # Add new columns for swapped centroid_x and centroid_y
+        modified_dataframe["new_x"] = modified_dataframe["centroid_y"]
+        modified_dataframe["new_y"] = modified_dataframe["centroid_x"]
+
+        modified_dataframe.to_csv(save_file_path, index=False)
         print('Identified objects saved successfully to path: ', save_file_path)
 
     def get_region_props_dataframe(self) -> pd.DataFrame:
