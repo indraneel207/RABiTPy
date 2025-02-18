@@ -467,7 +467,7 @@ class Tracker:
             cv2.VideoWriter: Initialized VideoWriter object.
         """
         frame_height, frame_width = frame.shape[:2]
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Codec for the output video
+        fourcc = cv2.VideoWriter_fourcc(*'MJPG')  # Codec for the output video
         video_writer = cv2.VideoWriter(
             output_video_path, fourcc, fps, (frame_width, frame_height))
         return video_writer
