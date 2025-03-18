@@ -35,14 +35,22 @@ class Stats:
         self.pixel_scale_factor: float = tracker_object._parent._parent.get_pixel_scale_factor()
         self._mean_array: List[float] = []
 
-    def calculate_speed_and_plot_mean(self, plots_per_row: int = 4, distribution_type: any = DEFAULT_DISTRIBUTION) -> np.ndarray:
+    def calculate_speed_and_plot_mean(self,
+                                      distribution_type: str = DEFAULT_DISTRIBUTION,
+                                      fit_range: tuple = None,
+                                      ci_range: tuple = (5, 95),
+                                      bin_size: int = 30,
+                                      speed_unit: str = "µm/s") -> np.ndarray:
         """
-        Calculate the mean array of speeds for each particle and plot the distributions.
+        Calculate the mean speeds for each particle and plot their speed distributions.
+        This version allows additional arguments to customize the distribution fitting and plotting.
 
         Args:
-            plots_per_row (int): Number of plots per row in the grid.
-            distribution_type (any): Distribution to fit. Default is 'norm'. 
-                Check distfit documentation for more options here: https://erdogant.github.io/distfit/pages/html/Parametric.html#distributions
+            distribution_type (str): Distribution type for fitting (default: 'norm').
+            fit_range (tuple): User-defined speed range for fitting (default: None, uses confidence interval).
+            ci_range (tuple): Confidence interval range for default speed limits (default: (5, 95)).
+            bin_size (int): Number of bins for histogram (default: 30).
+            speed_unit (str): Unit of speed to display on plots (default: "µm/s").
 
         Returns:
             np.ndarray: Array of mean speeds for each particle.
@@ -51,25 +59,18 @@ class Stats:
         print(f'Total unique particles: {len(unique_particles)}')
         mean_array: List[float] = []
 
-        total_particles = len(unique_particles)
-        # Calculate number of rows needed
-        rows = (total_particles + plots_per_row - 1) // plots_per_row
-
-        fig, axes = plt.subplots(rows * 2, plots_per_row, figsize=(20, rows * 10))
-        axes = axes.flatten()  # Flatten the 2D array of axes for easy iteration
-
+        # For each particle, compute speed and plot its distribution individually
         for idx in trange(len(unique_particles), desc='Calculating Speed'):
             each_particle = unique_particles[idx]
             current_particle = self.__get_particle_data(each_particle)
             speed = self.__calculate_speed(current_particle)
+            # Updated call passes the additional arguments to the new fitting method.
             mean_speed = self.__fit_and_plot_speed_distribution(
-                axes, idx, speed, each_particle, distribution_type=distribution_type)
+                speed, each_particle, distribution_type=distribution_type,
+                fit_range=fit_range, ci_range=ci_range,
+                bin_size=bin_size, speed_unit=speed_unit
+            )
             mean_array.append(mean_speed)
-
-        # Hide any unused subplots
-        self.__hide_unused_subplots(fig, axes, idx * 2 + 2)
-        plt.tight_layout()
-        plt.show()
 
         self._mean_array: List[float] = mean_array
         return np.array(mean_array)
@@ -118,33 +119,95 @@ class Stats:
         particle_data['speed'] = speed
         return speed
 
-    def __fit_and_plot_speed_distribution(self, axes: np.ndarray, idx: int, speed: np.ndarray, particle: int, distribution_type: any = DEFAULT_DISTRIBUTION) -> float:
+    def __fit_and_plot_speed_distribution(
+        self,
+        speed: np.ndarray,
+        particle: int,
+        distribution_type: str = 'norm',
+        fit_range: tuple = None,
+        ci_range: tuple = (5, 95),
+        bin_size: int = 30,
+        speed_unit: str = "µm/s"
+    ) -> float:
         """
-        Fit the speed distribution and plot the histogram and distribution.
+        Fit the speed distribution within a user-defined range and plot the histogram and fitted distribution.
 
         Args:
-            ax (plt.Axes): Matplotlib axes object to plot on.
             speed (np.ndarray): Array of speeds.
             particle (int): Particle ID.
-            distr (any): Distribution to fit.
+            distribution_type (str): Distribution type for fitting (e.g., "norm", "expon", "gamma", etc.; default: 'norm').
+            fit_range (tuple): User-defined speed range for fitting (default: None, uses CI).
+            ci_range (tuple): Confidence interval range for selecting default speed limits (default: (5, 95)).
+            bin_size (int): Number of bins for histogram (default: 30).
+            speed_unit (str): Unit of speed to display on plots (default: "µm/s").
 
         Returns:
             float: Mean speed of the particle.
         """
-        speed_distribution = distfit(distr=distribution_type, verbose=0)
-        speed_distribution.fit_transform(speed, verbose=False)
-        mean_speed = speed_distribution.model['loc']
+        if len(speed) == 0:
+            print(f"Particle {particle}: No speed data available.")
+            return 0.0
 
-        # Plot the histogram
-        ax_hist = axes[idx * 2]
-        ax_hist.hist(speed, bins=30, alpha=0.7, label='Speed')
-        ax_hist.set_title(f'Particle: {particle} - Speed Histogram')
+        # Determine the fitting range: use user-defined range if provided; otherwise use the specified confidence interval.
+        if fit_range:
+            lower_bound, upper_bound = fit_range
+        else:
+            lower_bound, upper_bound = np.percentile(speed, ci_range)
+
+        # Filter speed values within the selected range
+        speed_filtered = speed[(speed >= lower_bound) & (speed <= upper_bound)]
+
+        if len(speed_filtered) < 2:
+            print(
+                f"Particle {particle}: Not enough data points within selected range ({lower_bound}-{upper_bound} {speed_unit}).")
+            return 0.0
+
+        # Fit distribution only to the filtered speed values
+        try:
+            speed_distribution = distfit(distr=distribution_type, verbose=0)
+            speed_distribution.fit_transform(speed_filtered, verbose=False)
+            mean_speed = speed_distribution.model['loc']
+        except Exception as e: # pylint: disable=broad-except
+            print(
+                f"Error fitting distribution '{distribution_type}' for particle {particle}: {e}")
+            return 0.0
+
+        # Create figure with two subplots: left for histogram, right for fitted distribution
+        _, axes_local = plt.subplots(1, 2, figsize=(12, 5))
+
+        # Left Plot: Histogram with full data and fit range highlighted
+        ax_hist = axes_local[0]
+        ax_hist.hist(speed, bins=bin_size, alpha=0.7,
+                     color='black', label='Speed (Full Data)')
+        ax_hist.axvline(lower_bound, color='gray', linestyle='dashed',
+                        label=f'Lower Bound ({lower_bound} {speed_unit})')
+        ax_hist.axvline(upper_bound, color='gray', linestyle='dashed',
+                        label=f'Upper Bound ({upper_bound} {speed_unit})')
+        ax_hist.set_title(
+            f'Particle: {particle} - Speed Histogram (Full Data)')
+        ax_hist.set_xlabel(f'Speed ({speed_unit})')
+        ax_hist.set_ylabel('Frequency')
         ax_hist.legend()
 
-        # Plot the distribution
-        ax_dist = axes[idx * 2 + 1]
+        # Right Plot: Distribution fit for selected range, with mean speed labeled
+        ax_dist = axes_local[1]
         speed_distribution.plot(ax=ax_dist)
-        ax_dist.set_title(f'Particle: {particle} - Fitted Distribution')
+        ax_dist.axvline(mean_speed, color='blue', linestyle='dashed', linewidth=2,
+                        label=f'Mean Speed: {mean_speed:.2f} {speed_unit}')
+        ax_dist.set_xlim(lower_bound, upper_bound)
+        ax_dist.set_title(
+            f'Particle: {particle} - {distribution_type.capitalize()} Fit')
+
+        # Remove unwanted markers (e.g., "CII low/high") from the legend
+        handles, labels = ax_dist.get_legend_handles_labels()
+        new_handles_labels = [(h, l) for h, l in zip(
+            handles, labels) if 'CII' not in l]
+        if new_handles_labels:
+            new_handles, new_labels = zip(*new_handles_labels)
+            ax_dist.legend(new_handles, new_labels)
+
+        plt.tight_layout()
+        plt.show()
 
         return mean_speed
 
@@ -165,7 +228,7 @@ class Stats:
         for j in range(start_idx, len(axes)):
             fig.delaxes(axes[j])
 
-    def plot_overall_mean_speed_distribution(self, bins: int = 10) -> None:
+    def plot_overall_mean_speed_distribution(self, bins: int = 10, speed_unit: str = "µm/s") -> None:
         """
         Plot the overall mean speed distribution.
 
@@ -177,9 +240,10 @@ class Stats:
         # Normalize the overall distribution of mean_array
         _, ax = plt.subplots(figsize=(10, 6))
         mean_array = np.array(self._mean_array)
-        ax.hist(mean_array, bins=bins, density=False, alpha=0.7, label='Mean Speeds')
+        ax.hist(mean_array, bins=bins, density=False,
+                alpha=0.7, label='Mean Speeds')
         ax.set_title('Overall Mean Speed Distribution')
-        ax.set_xlabel('Mean Speed (um/s)')
+        ax.set_xlabel(f'Mean Speed {speed_unit}')
         ax.set_ylabel('Frequency')
         plt.show()
 

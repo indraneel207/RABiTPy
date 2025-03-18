@@ -23,6 +23,7 @@ build/
 develop-eggs/
 dist/
 downloads/
+sample/
 eggs/
 .eggs/
 lib/

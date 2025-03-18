@@ -328,10 +328,16 @@ class Tracker:
         self,
         output_video_filename: str,
         colormap_name: str = "viridis",
-        frame_index_offset: int = -1
+        frame_index_offset: int = -1,
+        show_labels: bool = True,
+        font_scale: float = 0.5,
+        font_thickness: int = 1,
+        label_offset_x: int = 5,
+        label_offset_y: int = -5
     ) -> None:
         """
         Overlays tracked particle trajectories onto the loaded video frames and saves the output video.
+        Uses internal parent objects for video information.
 
         Args:
             output_video_filename (str): Name of the output video file to save with overlaid tracks.
@@ -339,6 +345,11 @@ class Tracker:
                 Default is "viridis".
             frame_index_offset (int, optional): Offset to adjust frame indexing differences between
                 the tracking data and video frames. Default is -1.
+            show_labels (bool, optional): Whether to overlay particle ID labels on the video frames. Default is True.
+            font_scale (float, optional): Font size for particle ID labels. Default is 0.5.
+            font_thickness (int, optional): Thickness of the label text. Default is 1.
+            label_offset_x (int, optional): Horizontal offset for label placement. Default is 5.
+            label_offset_y (int, optional): Vertical offset for label placement. Default is -5.
 
         Raises:
             ValueError: If tracking data is not available.
@@ -359,8 +370,8 @@ class Tracker:
 
         # Retrieve frame rate information
         frame_rate_info = self._parent._parent.get_frame_rate()
-        fps = frame_rate_info.get('user_provided_fps') or frame_rate_info.get(
-            'default_fps') or 15  # Fallback to 15 FPS if not available
+        fps = frame_rate_info.get(
+            'user_provided_fps') or frame_rate_info.get('default_fps') or 15
 
         # Retrieve tracking data
         tracking_data = self._linked_particles_dataframes
@@ -369,13 +380,14 @@ class Tracker:
                 "Tracking data is empty. Ensure particles are linked before overlaying tracks.")
 
         # Sort tracking data by frame and particle for consistency
+        tracking_data = tracking_data.reset_index(drop=True)
         tracking_data = tracking_data.sort_values(by=["frame", "particle"])
 
         # Generate unique colors for particles
         particle_colors = self._generate_particle_colors(
             tracking_data, colormap_name)
 
-        # Initialize video writer
+        # Initialize video writer using the first frame dimensions
         video_writer = self._initialize_video_writer(
             frames[0], fps, output_video_path)
 
@@ -399,9 +411,22 @@ class Tracker:
                 # Update particle tracks
                 self._update_particle_tracks(frame_data, particle_tracks)
 
-                # Draw particle tracks on the frame
+                # Draw particle trajectories on the frame
                 self._draw_particle_tracks(
                     frame, particle_tracks, particle_colors)
+
+                # Optionally, draw particle ID labels at the last tracked position
+                if show_labels:
+                    for particle_id, track_points in particle_tracks.items():
+                        if track_points:
+                            last_position = track_points[-1]
+                            label_position = (
+                                last_position[0] + label_offset_x, last_position[1] + label_offset_y)
+                            cv2.putText(frame, str(particle_id), label_position,
+                                        cv2.FONT_HERSHEY_SIMPLEX, font_scale,
+                                        particle_colors.get(
+                                            particle_id, (255, 255, 255)),
+                                        font_thickness, cv2.LINE_AA)
 
                 # Write the processed frame to the output video
                 video_writer.write(frame)
@@ -409,7 +434,8 @@ class Tracker:
 
         # Release video writer resources
         video_writer.release()
-        print(f'Processed video with overlaid tracks saved to {output_video_path}')
+        print(
+            f'Processed video with overlaid tracks saved to {output_video_path}')
 
     # Private methods
     def __shape_and_sort_dataframe(self, dataframe: pd.DataFrame, cols: list[str], sort_by: list[str]) -> pd.DataFrame:
