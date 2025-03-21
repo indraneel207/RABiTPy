@@ -584,23 +584,7 @@ class Identify:
         print(f'total segmentation time: {net_time}s')
         return masks
 
-    def __convert_masks_to_binary(self, given_masks: List) -> List:
-        """
-        Converts the given masks to binary masks.
-        Args:
-            given_masks (List): The list of masks to convert to binary masks.
-        Returns:
-            List: The binary masks. 
-        """
-        background_class_value = 0
-        binary_mask_images = []
-        for mask in given_masks:
-            new_mask = mask > background_class_value
-            mask_as_image = new_mask.astype('uint8') * 255
-            binary_mask_images.append(mask_as_image)
-        return binary_mask_images
-
-    def __process_batch_images_to_get_binary_masks(self, batch_images: List, save_masks: bool = True, batch_start_index: int = 0) -> List:
+    def __process_batch_images_to_get_masks(self, batch_images: List, save_masks: bool = True, batch_start_index: int = 0) -> List:
         """
         Processes the batch images to get the binary masks.
         Args:
@@ -610,14 +594,13 @@ class Identify:
             List: The binary masks.
         """
         masks = self.__get_segmented_masks(batch_images)
-        binary_masks = self.__convert_masks_to_binary(masks)
         if save_masks:
-            for i, mask in enumerate(binary_masks):
+            for i, mask in enumerate(masks):
                 mask_index = batch_start_index + i
                 mask_path = os.path.join(
                     self._mask_store_path, f'mask_{mask_index}.tiff')
                 cv2.imwrite(mask_path, mask)
-        return binary_masks
+        return masks
 
     def __get_masks_from_batch_wise_segmented_images(self, batch_size: int = 5, save_masks: bool = True) -> List:
         """
@@ -631,7 +614,7 @@ class Identify:
         resultant_masks = []
         for each in trange(0, len(self._normalized_frames), batch_size, desc='Segmenting images'):
             batch_images = self._normalized_frames[each: each + batch_size]
-            binary_masks = self.__process_batch_images_to_get_binary_masks(
+            binary_masks = self.__process_batch_images_to_get_masks(
                 batch_images, save_masks, each)
             print(f'Batch {each // batch_size + 1} segmentation is complete')
             resultant_masks += binary_masks
@@ -764,9 +747,7 @@ class Identify:
                 refined_x, refined_y = self.__compute_refined_centroid(
                     opt_param, xmin, ymin, initial_center, fit_window)
                 gaussian_centroids[label] = (refined_y, refined_x)
-            except Exception as e:  # pylint: disable=W0703
-                print(
-                    f"Gaussian fit failed for region at {initial_center}: {e}")
+            except Exception:  # pylint: disable=W0703
                 gaussian_centroids[label] = initial_center
         return initial_centroids, gaussian_centroids
 
