@@ -456,7 +456,8 @@ class Capture:
 
                 if is_store_video_frames:
                     frame_counter += 1
-                    cv2.imwrite(f'{self._video_frames_store_path}/{image_path_prefix}_{frame_counter}.tiff', frame)
+                    frame_number = str(frame_counter).zfill(len(str(total_frames)))
+                    cv2.imwrite(f'{self._video_frames_store_path}/{image_path_prefix}_{frame_number}.tiff', frame)
 
                 captured_frames.append(frame)
                 progress_bar.update(1)

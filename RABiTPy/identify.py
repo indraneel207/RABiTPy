@@ -597,8 +597,9 @@ class Identify:
         if save_masks:
             for i, mask in enumerate(masks):
                 mask_index = batch_start_index + i
+                mask_number = str(mask_index).zfill(len(str(masks)))
                 mask_path = os.path.join(
-                    self._mask_store_path, f'mask_{mask_index}.tiff')
+                    self._mask_store_path, f'mask_{mask_number}.tiff')
                 cv2.imwrite(mask_path, mask)
         return masks
 
