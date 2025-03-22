@@ -4,6 +4,7 @@ on frames using different methods.
 """
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 
 import cv2
@@ -12,20 +13,21 @@ import numpy as np
 import pandas as pd
 from cellpose_omni import core, models  # type: ignore
 from cellpose_omni.models import MODEL_NAMES
+from matplotlib.lines import Line2D  # type: ignore
 from omnipose.utils import normalize99  # type: ignore
+from scipy.optimize import curve_fit  # type: ignore
 from skimage import measure
-from skimage.filters import ( # pylint: disable=E0611
-    try_all_threshold, # pylint: disable=E0611
-    threshold_otsu, # pylint: disable=E0611
-    threshold_isodata, # pylint: disable=E0611
-    threshold_li, # pylint: disable=E0611
-    threshold_mean, # pylint: disable=E0611
-    threshold_minimum, # pylint: disable=E0611
-    threshold_triangle, # pylint: disable=E0611
-    threshold_yen # pylint: disable=E0611
-) # pylint: disable=E0611
 from skimage.color import rgb2gray
-from tqdm import trange
+from skimage.filters import threshold_isodata  # pylint: disable=E0611
+from skimage.filters import threshold_li  # pylint: disable=E0611
+from skimage.filters import threshold_mean  # pylint: disable=E0611
+from skimage.filters import threshold_minimum  # pylint: disable=E0611
+from skimage.filters import threshold_otsu  # pylint: disable=E0611
+from skimage.filters import threshold_triangle  # pylint: disable=E0611
+from skimage.filters import threshold_yen  # pylint: disable=E0611
+from skimage.filters import \
+    try_all_threshold  # pylint: disable=E0611; pylint: disable=E0611
+from tqdm import tqdm, trange
 
 from .capture import Capture
 from .constants import (OMNIPOSE_DEFAULT_PARAMS, AvailableOperations,
@@ -205,10 +207,11 @@ class Identify:
         if is_update_frames:
             self._working_frames = updated_frames
 
-        print(f'Selected {algorithm} Algorithm-based thresholding applied successfully.')
         print(
-        "NOTE: If dark objects are displayed over a light background, set 'is_color_inverse' to True "
-        "and redo the thresholding to correct it before proceeding to the next step."
+            f'Selected {algorithm} Algorithm-based thresholding applied successfully.')
+        print(
+            "NOTE: If dark objects are displayed over a light background, set 'is_color_inverse' to True "
+            "and redo the thresholding to correct it before proceeding to the next step."
         )
 
         return updated_frames
@@ -236,7 +239,8 @@ class Identify:
             )
 
             # Convert thresholded image to binary format (True/False)
-            binary_image = thresholded_image > 0  # This creates a boolean array (True/False)
+            # This creates a boolean array (True/False)
+            binary_image = thresholded_image > 0
 
             # Convert to 0/1 representation
             binary_image = binary_image.astype(int)
@@ -252,8 +256,8 @@ class Identify:
 
         print('Gaussian adaptive thresholding applied successfully.')
         print(
-        "NOTE: If dark objects are displayed over a light background, set 'is_color_inverse' to True "
-        "and redo the thresholding to correct it before proceeding to the next step."
+            "NOTE: If dark objects are displayed over a light background, set 'is_color_inverse' to True "
+            "and redo the thresholding to correct it before proceeding to the next step."
         )
         return updated_frames
 
@@ -267,7 +271,8 @@ class Identify:
         """
         updated_frames: List = []
         for frame_index in trange(len(self._captured_frames), desc='Applying color inverse'):
-            inverted_frame = cv2.bitwise_not(self._captured_frames[frame_index])
+            inverted_frame = cv2.bitwise_not(
+                self._captured_frames[frame_index])
             updated_frames.append(inverted_frame)
 
         if is_update_frames:
@@ -579,23 +584,7 @@ class Identify:
         print(f'total segmentation time: {net_time}s')
         return masks
 
-    def __convert_masks_to_binary(self, given_masks: List) -> List:
-        """
-        Converts the given masks to binary masks.
-        Args:
-            given_masks (List): The list of masks to convert to binary masks.
-        Returns:
-            List: The binary masks. 
-        """
-        background_class_value = 0
-        binary_mask_images = []
-        for mask in given_masks:
-            new_mask = mask > background_class_value
-            mask_as_image = new_mask.astype('uint8') * 255
-            binary_mask_images.append(mask_as_image)
-        return binary_mask_images
-
-    def __process_batch_images_to_get_binary_masks(self, batch_images: List, save_masks: bool = True, batch_start_index: int = 0) -> List:
+    def __process_batch_images_to_get_masks(self, batch_images: List, save_masks: bool = True, batch_start_index: int = 0) -> List:
         """
         Processes the batch images to get the binary masks.
         Args:
@@ -605,14 +594,14 @@ class Identify:
             List: The binary masks.
         """
         masks = self.__get_segmented_masks(batch_images)
-        binary_masks = self.__convert_masks_to_binary(masks)
         if save_masks:
-            for i, mask in enumerate(binary_masks):
+            for i, mask in enumerate(masks):
                 mask_index = batch_start_index + i
+                mask_number = str(mask_index).zfill(len(str(masks)))
                 mask_path = os.path.join(
-                    self._mask_store_path, f'mask_{mask_index}.tiff')
+                    self._mask_store_path, f'mask_{mask_number}.tiff')
                 cv2.imwrite(mask_path, mask)
-        return binary_masks
+        return masks
 
     def __get_masks_from_batch_wise_segmented_images(self, batch_size: int = 5, save_masks: bool = True) -> List:
         """
@@ -626,8 +615,237 @@ class Identify:
         resultant_masks = []
         for each in trange(0, len(self._normalized_frames), batch_size, desc='Segmenting images'):
             batch_images = self._normalized_frames[each: each + batch_size]
-            binary_masks = self.__process_batch_images_to_get_binary_masks(
+            binary_masks = self.__process_batch_images_to_get_masks(
                 batch_images, save_masks, each)
             print(f'Batch {each // batch_size + 1} segmentation is complete')
             resultant_masks += binary_masks
         return resultant_masks
+
+    # Gaussian Fit Methods
+    def __2d_gaussian(self, coords, amplitude, xo, yo, sigma_x, sigma_y, offset):
+        """
+        A static 2D Gaussian model.
+        """
+        x, y = coords
+        return (amplitude * np.exp(-(((x - xo) ** 2) / (2 * sigma_x ** 2) +
+                                     ((y - yo) ** 2) / (2 * sigma_y ** 2))) + offset).ravel()
+
+    def __extract_subimage(self, gray_frame: np.ndarray, center: tuple, fit_window: int):
+        """
+        Extracts a sub-image centered at `center` using a window of size fit_window.
+
+        Args:
+            gray_frame (np.ndarray): Grayscale image.
+            center (tuple): Center in (y, x) order.
+            fit_window (int): Half-size of the window.
+
+        Returns:
+            sub_image (np.ndarray): Extracted sub-image.
+            xmin, ymin (int): Top-left coordinates of the sub-image.
+            If the window exceeds image boundaries, returns (None, None, None).
+        """
+        x_center = center[1]  # center is (y, x)
+        y_center = center[0]
+        xmin = int(x_center - fit_window)
+        xmax = int(x_center + fit_window)
+        ymin = int(y_center - fit_window)
+        ymax = int(y_center + fit_window)
+
+        if xmin < 0 or ymin < 0 or xmax >= gray_frame.shape[1] or ymax >= gray_frame.shape[0]:
+            return None, None, None
+        sub_image = gray_frame[ymin:ymax, xmin:xmax]
+        return sub_image, xmin, ymin
+
+    def __fit_gaussian_to_subimage(self, sub_image: np.ndarray, fit_window: int):
+        """
+        Performs a 2D Gaussian fit on the given sub-image.
+
+        Args:
+            sub_image (np.ndarray): The extracted sub-image.
+            fit_window (int): Half-size of the window.
+
+        Returns:
+            opt_param (np.ndarray): Optimized parameters.
+            x_vals, y_vals (np.ndarray): Meshgrid arrays corresponding to the sub-image.
+        """
+        x_vals, y_vals = np.meshgrid(
+            np.arange(sub_image.shape[1]), np.arange(sub_image.shape[0]))
+        x_data = x_vals.ravel()
+        y_data = y_vals.ravel()
+        intensity_data = sub_image.ravel()
+
+        amplitude_guess = np.max(sub_image)
+        sigma_guess = max(fit_window / 2, 1)
+        offset_guess = np.min(sub_image)
+        initial_guess = (amplitude_guess, fit_window / 2,
+                         fit_window / 2, sigma_guess, sigma_guess, offset_guess)
+        bounds = ((0, 0, 0, 0.1, 0.1, 0), (np.inf, fit_window,
+                  fit_window, fit_window, fit_window, np.inf))
+
+        opt_param, _ = curve_fit(self.__2d_gaussian, (x_data, y_data), intensity_data,
+                                 p0=initial_guess, bounds=bounds)
+        return opt_param, x_vals, y_vals
+
+    def __compute_refined_centroid(self, opt_param: np.ndarray, xmin: int, ymin: int, initial_center: tuple, fit_window: int):
+        """
+        Computes the refined centroid (in full-image coordinates) from the fitted parameters.
+
+        Args:
+            opt_param (np.ndarray): Optimized Gaussian parameters.
+            xmin, ymin (int): Top-left coordinates of the sub-image.
+            initial_center (tuple): Original centroid in (y, x) order.
+            fit_window (int): Half-size of the window.
+
+        Returns:
+            (refined_x, refined_y): The refined centroid.
+            If the shift exceeds fit_window, returns the initial centroid.
+        """
+        refined_x = xmin + opt_param[1]
+        refined_y = ymin + opt_param[2]
+        x_init = initial_center[1]
+        y_init = initial_center[0]
+        if abs(refined_x - x_init) > fit_window or abs(refined_y - y_init) > fit_window:
+            return x_init, y_init
+        return refined_x, refined_y
+
+    def __process_gaussian_fit_on_a_frame(self, gray_frame: np.ndarray, frame_index: pd.DataFrame, fit_window: int = 7) -> tuple[dict, dict]:
+        """
+        Processes the Gaussian fit on a single frame.
+
+        Args:
+            gray_frame (np.ndarray): Grayscale image.
+            frame_index (int): The index of the frame to process.
+            fit_window (int): Half-size of the window for the Gaussian fit.
+        Returns:
+            initial_centroids (dict): Initial centroids in (y, x) order.
+            gaussian_centroids (dict): Refined centroids in (y, x) order.
+        """
+        frame_region_props = self._region_props_dataframe[
+            self._region_props_dataframe['frame'] == frame_index]
+
+        # Skip empty frames
+        if frame_region_props.empty:
+            return None  # Skip empty frames
+
+        initial_centroids = {}
+        gaussian_centroids = {}
+
+        for _, row in frame_region_props.iterrows():
+            initial_center = (row['centroid_y'], row['centroid_x'])
+            label = row['label']
+
+            initial_centroids[label] = initial_center
+
+            sub_image, xmin, ymin = self.__extract_subimage(
+                gray_frame, initial_center, fit_window)
+            if sub_image is None:
+                gaussian_centroids[label] = initial_center
+                continue
+
+            try:
+                opt_param, _, _ = self.__fit_gaussian_to_subimage(
+                    sub_image, fit_window)
+                refined_x, refined_y = self.__compute_refined_centroid(
+                    opt_param, xmin, ymin, initial_center, fit_window)
+                gaussian_centroids[label] = (refined_y, refined_x)
+            except Exception:  # pylint: disable=W0703
+                gaussian_centroids[label] = initial_center
+        return initial_centroids, gaussian_centroids
+
+    def visualize_gaussian_fit_on_a_frame(self, frame_index: int, fit_window: int = 7) -> None:
+        """
+        Visualizes the Gaussian fit on all centroids in a frame.
+
+        Args:
+            frame_index (int): The index of the frame to visualize.
+            fit_window (int): Half-size of the window for the Gaussian fit.
+
+        Returns:
+            None
+        """
+        if self._region_props_dataframe.empty:
+            print(
+                "Region properties dataframe is empty. Please generate region properties first.")
+            return
+
+        if frame_index < 0 or frame_index > len(self._captured_frames):
+            print("Invalid frame index.")
+            return
+
+        gray_frame = self._working_frames[frame_index - 1]
+
+        initial_centroids, refined_centroids = self.__process_gaussian_fit_on_a_frame(
+            gray_frame, frame_index, fit_window)
+
+        plt.figure(figsize=(10, 8))
+        plt.imshow(gray_frame, cmap='gray')
+        plt.plot([center[0] for center in initial_centroids.values()],
+                 [center[1] for center in initial_centroids.values()], 'bo', markersize=5)
+        plt.plot([center[0] for center in refined_centroids.values()],
+                 [center[1] for center in refined_centroids.values()], 'g*', markersize=5)
+        plt.title(f"Gaussian Fit on All Centroids in Frame {frame_index}")
+        plt.xlabel("Y (pixels)")
+        plt.ylabel("X (pixels)")
+        legend_elements = [Line2D([0], [0], marker='o', color='w', label='Initial centroid',
+                                  markerfacecolor='b', markersize=8),
+                           Line2D([0], [0], marker='*', color='w', label='Refined centroid',
+                                  markerfacecolor='g', markersize=12)]
+        plt.legend(handles=legend_elements, loc='upper right')
+        plt.show()
+
+    def optimize_centroids_using_gaussian_fit(self, fit_window: int = 7, max_workers: int = None) -> None:
+        """
+        Optimizes the centroid coordinates in the internal region properties dataframe using
+        parallel processing with threads. Each frame is processed independently: for each region
+        in a frame, a sub-image is extracted and a 2D Gaussian fit is performed. If the refined
+        centroid is within acceptable bounds, the internal dataframe is updated accordingly.
+
+        This version uses ThreadPoolExecutor for parallel processing.
+
+        Args:
+            fit_window (int): The search window size around the detected centroid (default is 7).
+            max_workers (int): Maximum number of worker threads. If None, ThreadPoolExecutor
+                            will choose a default.
+        Returns:
+            None
+        """
+        if self._region_props_dataframe.empty:
+            print(
+                "Region properties dataframe is empty. Please generate region properties first.")
+            return
+
+        num_frames = len(self._captured_frames)
+        # Assuming frames are numbered starting at 1
+        frame_numbers = range(1, num_frames + 1)
+
+        futures = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for frame_num in frame_numbers:
+                # Submit processing task for each frame. Use the stored working frame.
+                futures[executor.submit(self.__process_gaussian_fit_on_a_frame,
+                                        self._working_frames[frame_num - 1],
+                                        frame_num, fit_window)] = frame_num
+
+            results = {}
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Processing frames (Parallel)"):
+                frame_num = futures[future]
+                try:
+                    # Expecting each future to return a tuple: (frame_num, (initial_centroids, refined_centroids))
+                    result = future.result()
+                    results[frame_num] = result[1]
+                except Exception as e:  # pylint: disable=W0703
+                    print(f"Error processing frame {frame_num}: {e}")
+                    results[frame_num] = None
+
+        # Update the internal dataframe using the refined centroids
+        for frame_num, result in tqdm(results.items(), desc="Updating centroids"):
+            if result is None:
+                continue
+            for label, refined_center in result.items():
+                self._region_props_dataframe.loc[
+                    (self._region_props_dataframe['frame'] == frame_num) &
+                    (self._region_props_dataframe['label'] == label),
+                    ['centroid_y', 'centroid_x']
+                ] = refined_center
+
+        print("Centroids optimized successfully using Gaussian fit.")
