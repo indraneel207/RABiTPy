@@ -1,0 +1,97 @@
+
+RABiTPy Pre-Walkthrough Setup and Troubleshooting Guide
+=======================================================
+
+This guide is meant to help users set up their environment **before** running the main RABiTPy walkthrough file. It is especially helpful for users who are new to Python or have encountered installation issues.
+
+Follow these steps first to ensure that your system is ready to use RABiTPy smoothly.
+
+---
+
+1. Set Up a New Python Environment (Recommended)
+------------------------------------------------
+
+Using a separate environment helps avoid conflicts with other programs.
+
+Step-by-step:
+
+1. Open the Anaconda Prompt (Windows) or terminal (Mac/Linux)
+2. Copy and paste the following commands one at a time:
+
+conda create --name rabitpy_env python=3.10.11
+conda activate rabitpy_env
+pip install rabitpy
+
+This installs RABiTPy in a clean and safe space.
+
+---
+
+2. Check if Everything Works
+----------------------------
+
+After installation, type:
+
+python
+
+Then in the Python prompt, type:
+
+import rabitpy
+import cv2
+print(cv2.__version__)
+
+If this works without errors, you're all set!
+
+---
+
+3. What to Do if You See: "No module named 'cv2'"
+-------------------------------------------------
+
+This means OpenCV (a package RABiTPy needs) isn't installed.
+
+Try this first:
+
+pip install opencv-python
+
+If you're using a server or a computer without a screen, try:
+
+pip install opencv-python-headless
+
+Still not working? Try using Conda instead:
+
+conda install -c conda-forge opencv
+
+Then test again:
+
+python
+import cv2
+print(cv2.__version__)
+
+---
+
+4. Tips for Avoiding Errors
+---------------------------
+
+- Always make sure your environment is activated: 
+  conda activate rabitpy_env
+
+- Don't mix too many OpenCV versions. Stick with one.
+- If you’re using an editor like VS Code or PyCharm, make sure it uses the environment you created.
+
+---
+
+5. When Nothing Else Works
+--------------------------
+
+Sometimes, the easiest fix is to start fresh.
+
+Try deleting your old environment and starting again:
+
+conda remove --name rabitpy_env --all
+conda create --name rabitpy_env python=3.10.11
+conda activate rabitpy_env
+pip install rabitpy
+
+---
+
+
+Thanks for trying out RABiTPy. Happy tracking!
