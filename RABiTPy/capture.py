@@ -5,6 +5,7 @@ from a video, and perform related operations.
 import os
 import cv2
 from tqdm import tqdm, trange
+import tifffile
 
 
 class Capture:
@@ -198,6 +199,55 @@ class Capture:
         self._pixel_scale_factor = pixel_scale_factor
         self._scale_units = scale_units
         self._actual_fps = capture_speed_in_fps
+
+    def load_tiff_images_as_frames(
+        self,
+        file_name="",
+        capture_speed_in_fps=DEFAULT_CAPTURE_SPEED_IN_FPS,
+        pixel_scale_factor=DEFAULT_PIXEL_SCALE_FACTOR,
+        scale_units=DEFAULT_SCALE_UNITS,
+        is_store_video_frames=True,
+        store_images_path=DEFAULT_STORE_IMAGE_FILE_DIRECTORY,
+    ):
+        """
+        Loads TIFF images as frames from the specified file.
+        file_name: The name of the TIFF file.
+        capture_speed_in_fps: The capture speed in frames per second.
+        pixel_scale_factor: The pixel scale factor.
+        scale_units: The scale units.
+        is_store_video_frames: Flag to store video frames.
+        store_images_path: Path to store images.
+        """
+        self._default_fps = capture_speed_in_fps
+        self._actual_fps = capture_speed_in_fps
+        self._pixel_scale_factor = pixel_scale_factor
+        self._scale_units = scale_units
+
+        file_path = os.path.join(self._directory, file_name)
+        if not os.path.isfile(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        if is_store_video_frames:
+            self._video_frames_store_path = self.__handle_folder_preprocess(
+                store_images_path
+            )
+
+        with tifffile.TiffFile(file_path) as tiff:
+            frames = [page.asarray() for page in tiff.pages]
+
+            if is_store_video_frames:
+                for index in trange(len(frames), desc="Saving frames"):
+                    frame_number = str(index).zfill(len(str(len(frames))))
+                    tifffile.imwrite(
+                        os.path.join(
+                            self._video_frames_store_path, f"frame_{frame_number}.tiff"
+                        ),
+                        frames[index],
+                    )
+
+        self._captured_frames = frames
+        print(f"{len(frames)} frames loaded from TIFF file: {file_path}")
+        return frames
 
     # Private Methods
     def __capture_images_from_video(self,

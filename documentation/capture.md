@@ -182,6 +182,32 @@ Loads all images from the specified folder as frames. The images are loaded in a
 
 ---
 
+### `load_tiff_images_as_frames(capture_speed_in_fps=DEFAULT_CAPTURE_SPEED_IN_FPS, pixel_scale_factor=DEFAULT_PIXEL_SCALE_FACTOR, scale_units=DEFAULT_SCALE_UNITS, is_store_video_frames=True, store_images_path=DEFAULT_STORE_IMAGE_FILE_DIRECTORY) -> list`
+
+**Description:**  
+Loads TIFF images as frames from the specified file.
+
+**Arguments:**
+
+| Name                   | Type  | Explanation                                                                                       | Optional | Default Value                             |
+|------------------------|-------|---------------------------------------------------------------------------------------------------|----------|-------------------------------------------|
+| `file_name`            | `str` | The name of the TIFF file.                                                                        | No       | N/A                                       |
+| `capture_speed_in_fps` | `int` | The capture speed in frames per second.                                                          | Yes      | `DEFAULT_CAPTURE_SPEED_IN_FPS`           |
+| `pixel_scale_factor`   | `float`| The pixel scale factor.                                                                           | Yes      | `DEFAULT_PIXEL_SCALE_FACTOR`              |
+| `scale_units`          | `str` | The scale units.                                                                                  | Yes      | `DEFAULT_SCALE_UNITS`                     |
+| `is_store_video_frames`| `bool`| Flag indicating whether to save the extracted frames as images.                                   | Yes      | `False`                                   |
+| `store_images_path`    | `str` | Directory path where the frames should be stored if saving is enabled.                           | Yes      | `DEFAULT_STORE_IMAGE_FILE_DIRECTORY`      |
+
+**Returns:**
+
+- `list`: A list of loaded frames as NumPy arrays.
+
+**Errors:**
+
+- **`FileNotFoundError`**: Raised if the specified folder is not found.
+
+---
+
 ### `set_properties(pixel_scale_factor: float = DEFAULT_PIXEL_SCALE_FACTOR, scale_units: str = DEFAULT_SCALE_UNITS, capture_speed_in_fps: int = None) -> None`
 
 **Description:**  
