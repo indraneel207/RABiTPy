@@ -11,7 +11,7 @@ long_description = (this_directory / "pypi-description.md").read_text(encoding="
 
 setup(
     name='RABiTPy',
-    version='1.1.0',
+    version='1.2.0',
     packages=find_packages(),
     install_requires=[
         # Add your package dependencies here
