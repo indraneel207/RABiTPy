@@ -62,7 +62,26 @@ print(cv2.__version__)
 
 ---
 
-4. When Nothing Else Works
+4. If Jupyter cannot find the RABiTPy Environment
+------------------------------------------------------------
+
+Some users (especially on Windows using Anaconda Prompt) may find that even after activating `rabitpy_env`, Jupyter Notebook defaults to the wrong Python kernel. This can cause errors like:
+
+    ModuleNotFoundError: No module named 'RABiTPy'
+
+To fix this, run the following commands inside the activated environment:
+
+    conda install ipykernel
+    python -m ipykernel install --user --name=rabitpy_env --display-name "Python (rabitpy_env)"
+
+Then, inside Jupyter Notebook:
+
+- Go to the top menu bar: Kernel → Change kernel → Python (rabitpy_env)
+- Now run the notebook again. The imports should work correctly.
+
+---
+
+5. When Nothing Else Works
 --------------------------
 
 Sometimes, the easiest fix is to start fresh.
